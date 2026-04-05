@@ -1,5 +1,7 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { connectDB } from './db';
 import api from './api';
 
 const app = express();
@@ -14,7 +16,8 @@ app.get('/', (req, res) => { // GET SUR localhost:8000/
 
 app.use('/api', api);
 
-app.listen(port, () => {
-	// eslint-disable-next-line no-console
-	console.log(`Server listening on ${port}`);
+connectDB().then(() => {
+	app.listen(port, () => {
+		// console.log(`Server listening on ${port}`);
+	});
 });
