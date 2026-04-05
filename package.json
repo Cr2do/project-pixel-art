@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"description": "REACT Project",
 	"main": "index.ts",
-	"repository": "https://github.com/MamitianaRak/pixel-art",
+	"repository": "https://github.com/Cr2do/project-pixel-art",
 	"author": "AYIVI Marie-diégo Crédo, MOUMENI Mohamed Amine, RAKOTOSON Mamitiana, BENDIB Khadija",
 	"license": "MIT",
 	"private": true,
