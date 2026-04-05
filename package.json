@@ -1,0 +1,28 @@
+{
+	"name": "2026-project-react",
+	"version": "0.0.1",
+	"description": "REACT Project",
+	"main": "index.ts",
+	"repository": "https://github.com/MamitianaRak/pixel-art",
+	"author": "AYIVI Marie-diégo Crédo, MOUMENI Mohamed Amine, RAKOTOSON Mamitiana, BENDIB Khadija",
+	"license": "MIT",
+	"private": true,
+	"devDependencies": {
+		"@eslint/js": "^9.39.4",
+		"concurrently": "^9.1.2",
+		"eslint": "^9.39.4"
+	},
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"start": "concurrently \"npm run start:client\" \"npm run start:api\"",
+		"start:client": "npm run dev --workspace=client",
+		"start:api": "npm run start --workspace=api",
+		"lint": "npm run lint --workspace=client && npm run lint --workspace=api"
+	},
+	"packageManager": "npm@10.0.0",
+	"engines": {
+		"node": ">=20.0.0"
+	}
+}

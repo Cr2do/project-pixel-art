@@ -1,0 +1,26 @@
+{
+	"name": "api",
+	"version": "0.0.1",
+	"description": "API for REACT Project",
+	"main": "index.js",
+	"license": "MIT",
+	"private": true,
+	"dependencies": {
+		"cors": "^2.8.6",
+		"express": "^4.22.1"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.39.4",
+		"@types/cors": "^2.8.17",
+		"@types/express": "^5.0.1",
+		"@types/node": "^22.0.0",
+		"eslint": "^9.39.4",
+		"tsx": "^4.19.3",
+		"typescript": "^5.8.3",
+		"typescript-eslint": "^8.31.0"
+	},
+	"scripts": {
+		"start": "tsx --watch index.ts",
+		"lint": "eslint ."
+	}
+}
