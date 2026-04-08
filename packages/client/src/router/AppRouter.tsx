@@ -4,6 +4,7 @@ import RegisterPage from '../pages/auth/RegisterPage';
 import UserDashboardPage from '../pages/user/UserDashboardPage';
 import UserProfilePage from '../pages/user/UserProfilePage';
 import UserBoardsPage from '../pages/user/UserBoardsPage';
+import BoardDetailPage from '../pages/user/BoardDetailPage';
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import ProtectedRoute from './ProtectedRoute';
@@ -31,6 +32,7 @@ const router = createBrowserRouter([
 					{ path: '/dashboard', element: <UserDashboardPage /> },
 					{ path: '/profile', element: <UserProfilePage /> },
 					{ path: '/my-boards', element: <UserBoardsPage /> },
+					{ path: '/boards/:id', element: <BoardDetailPage /> },
 				],
 			},
 		],
