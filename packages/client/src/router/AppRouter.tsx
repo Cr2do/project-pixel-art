@@ -5,6 +5,7 @@ import UserDashboardPage from '../pages/user/UserDashboardPage';
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import ProtectedRoute from './ProtectedRoute';
+import UserLayout from '../layouts/UserLayout';
 
 // TODO: replace with real auth state (context, store, etc.)
 const isAuthenticated = true;
@@ -22,7 +23,12 @@ const router = createBrowserRouter([
 	{
 		element: <ProtectedRoute isAllowed={isAuthenticated} />,
 		children: [
-			{ path: '/dashboard', element: <UserDashboardPage /> },
+			{
+				element: <UserLayout />,
+				children: [
+					{ path: '/dashboard', element: <UserDashboardPage /> },
+				],
+			},
 		],
 	},
 	{
