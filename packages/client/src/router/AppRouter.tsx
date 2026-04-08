@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import UserDashboardPage from '../pages/user/UserDashboardPage';
+import UserProfilePage from '../pages/user/UserProfilePage';
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import ProtectedRoute from './ProtectedRoute';
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
 				element: <UserLayout />,
 				children: [
 					{ path: '/dashboard', element: <UserDashboardPage /> },
+					{ path: '/profile', element: <UserProfilePage /> },
 				],
 			},
 		],

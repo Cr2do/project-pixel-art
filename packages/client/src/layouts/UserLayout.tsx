@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTheme } from '@/hooks/use-theme';
+import { getUserInitials } from '@/utils/user.utils';
 import { MOCK_CURRENT_USER } from '@/mocks/user.mock';
 
 interface NavItem {
@@ -51,7 +52,7 @@ function UserLayout() {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const user = MOCK_CURRENT_USER;
-  const initials = `${user.firstname[0]}${user.lastname[0]}`.toUpperCase();
+  const initials = getUserInitials(user.firstname, user.lastname);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
