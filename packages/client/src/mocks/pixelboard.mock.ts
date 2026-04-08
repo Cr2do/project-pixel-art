@@ -1,4 +1,4 @@
-import { IPixelBoard } from '@/types';
+import { IPixelBoard, PixelBoardStatus } from '@/types';
 import { MOCK_CURRENT_USER } from './user.mock';
 
 const USER_ID = MOCK_CURRENT_USER._id;
@@ -11,7 +11,7 @@ export const MOCK_PIXELBOARDS: IPixelBoard[] = [
     height: 64,
     position_x: 0,
     position_y: 0,
-    status: 'IN_PROGRESS',
+    status: PixelBoardStatus.IN_PROGRESS,
     allow_override: true,
     delay_seconds: 30,
     contributions: [
@@ -29,7 +29,7 @@ export const MOCK_PIXELBOARDS: IPixelBoard[] = [
     height: 32,
     position_x: 0,
     position_y: 0,
-    status: 'IN_PROGRESS',
+    status: PixelBoardStatus.IN_PROGRESS,
     allow_override: false,
     delay_seconds: 60,
     contributions: [
@@ -46,7 +46,7 @@ export const MOCK_PIXELBOARDS: IPixelBoard[] = [
     height: 128,
     position_x: 0,
     position_y: 0,
-    status: 'FINISHED',
+    status: PixelBoardStatus.FINISHED,
     allow_override: true,
     delay_seconds: 10,
     contributions: [
@@ -64,7 +64,7 @@ export const MOCK_PIXELBOARDS: IPixelBoard[] = [
     height: 48,
     position_x: 0,
     position_y: 0,
-    status: 'FINISHED',
+    status: PixelBoardStatus.FINISHED,
     allow_override: false,
     delay_seconds: 120,
     contributions: [

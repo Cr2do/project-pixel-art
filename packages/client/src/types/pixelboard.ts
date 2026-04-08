@@ -4,7 +4,10 @@ export interface IBoardContribution {
   is_author: boolean;
 }
 
-export type PixelBoardStatus = 'IN_PROGRESS' | 'FINISHED';
+export enum PixelBoardStatus {
+  IN_PROGRESS = 'IN_PROGRESS',
+  FINISHED = 'FINISHED',
+}
 
 export interface IPixelBoard {
   _id: string;
