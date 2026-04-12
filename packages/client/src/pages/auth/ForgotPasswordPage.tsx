@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -12,32 +12,31 @@ import {
 import { Button } from '@/components/ui/button';
 import { ControlledInput } from '@/components/form/ControlledInput';
 import { useAuth } from '@/context/AuthContext';
-import { UserRole } from '@/types';
-import { loginSchema, type LoginFormData } from '@/schemas/auth.schema';
+import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/schemas/auth.schema';
 
-function LoginPage() {
-  const navigate = useNavigate();
-  const { login, isAuthenticated, isAdmin } = useAuth();
+function ForgotPasswordPage() {
+  const { forgotPassword } = useAuth();
+  const [resetPath, setResetPath] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     control,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+  } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
   });
 
-  if (isAuthenticated) {
-    return <Navigate to={isAdmin ? '/admin' : '/dashboard'} replace />;
-  }
-
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: ForgotPasswordFormData) => {
     setServerError(null);
+    setSuccessMessage(null);
+    setResetPath(null);
     try {
-      const user = await login(data);
-      navigate(user.role === UserRole.ADMIN ? '/admin' : '/dashboard', { replace: true });
+      const response = await forgotPassword(data.email);
+      setSuccessMessage(response.message);
+      setResetPath(response.resetPath ?? null);
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Une erreur est survenue.');
     }
@@ -47,9 +46,9 @@ function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Connexion</CardTitle>
+          <CardTitle className="text-2xl">Mot de passe oublié</CardTitle>
           <CardDescription>
-            Compte admin : admin@pixel-art.dev / admin123
+            Entrez votre email pour recevoir un lien de réinitialisation.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -61,26 +60,27 @@ function LoginPage() {
               type="email"
               placeholder="vous@exemple.com"
             />
-            <ControlledInput
-              control={control}
-              name="password"
-              label="Mot de passe"
-              type="password"
-              placeholder="••••••••"
-            />
             {serverError && (
               <p className="text-sm text-destructive">{serverError}</p>
             )}
+            {successMessage && (
+              <p className="text-sm text-green-600">{successMessage}</p>
+            )}
+            {resetPath && (
+              <Link
+                to={resetPath}
+                className="block text-sm text-primary hover:underline"
+              >
+                Ouvrir le lien de réinitialisation (mock)
+              </Link>
+            )}
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Connexion...' : 'Se connecter'}
+              {isSubmitting ? 'Envoi...' : 'Envoyer'}
             </Button>
           </form>
-          <div className="flex justify-between mt-4 text-sm">
-            <Link to="/register" className="text-primary hover:underline">
-              Créer un compte
-            </Link>
-            <Link to="/forgot-password" className="text-primary hover:underline">
-              Mot de passe oublié ?
+          <div className="mt-4 text-sm">
+            <Link to="/login" className="text-primary hover:underline">
+              Retour à la connexion
             </Link>
           </div>
         </CardContent>
@@ -89,4 +89,4 @@ function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default ForgotPasswordPage;
