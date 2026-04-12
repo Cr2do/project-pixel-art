@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth.middleware';
 import { RegisterSchema, LoginSchema } from '../utils/schemas';
+import { SchemaValidationError } from '../utils/errors';
 import * as authService from '../services/auth.service';
 
 const router = Router();
@@ -9,7 +10,7 @@ const router = Router();
 router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
   const result = RegisterSchema.safeParse(req.body);
   if (!result.success) {
-    res.status(400).json({ message: 'Données invalides', errors: result.error.issues });
+    next(new SchemaValidationError(result.error));
     return;
   }
   try {
@@ -24,7 +25,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
 router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   const result = LoginSchema.safeParse(req.body);
   if (!result.success) {
-    res.status(400).json({ message: 'Données invalides', errors: result.error.issues });
+    next(new SchemaValidationError(result.error));
     return;
   }
   try {
