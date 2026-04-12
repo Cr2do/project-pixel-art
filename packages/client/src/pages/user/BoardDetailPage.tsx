@@ -16,7 +16,7 @@ import { STATUS_LABEL, getUserPixelCount } from '@/utils/pixelboard.utils';
 
 function BoardDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const board = MOCK_PIXELBOARDS.find((b) => b._id === id);
+  const board = MOCK_PIXELBOARDS.find((b) => b.id === id);
   const user = MOCK_CURRENT_USER;
 
   if (!board) {
@@ -38,7 +38,7 @@ function BoardDetailPage() {
   }
 
   const isActive = board.status === PixelBoardStatus.IN_PROGRESS;
-  const myPixels = getUserPixelCount(board, user._id);
+  const myPixels = getUserPixelCount(board, user.id);
   const totalPixels = board.contributions.reduce(
     (sum, c) => sum + c.nb_pixels_placed,
     0,

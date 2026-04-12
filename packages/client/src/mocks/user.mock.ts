@@ -1,7 +1,7 @@
 import { IUser, UserRole } from '@/types';
 
 export const MOCK_CURRENT_USER: IUser = {
-  _id: '665a1b2c3d4e5f6a7b8c9d01',
+  id: '665a1b2c3d4e5f6a7b8c9d01',
   firstname: 'Mamitiana',
   lastname: 'Rakoto',
   email: 'mamitiana@pixelboard.dev',

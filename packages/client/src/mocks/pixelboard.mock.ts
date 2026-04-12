@@ -1,11 +1,11 @@
 import { IPixelBoard, PixelBoardStatus } from '@/types';
 import { MOCK_CURRENT_USER } from './user.mock';
 
-const USER_ID = MOCK_CURRENT_USER._id;
+const USER_ID = MOCK_CURRENT_USER.id;
 
 export const MOCK_PIXELBOARDS: IPixelBoard[] = [
   {
-    _id: 'board-001',
+    id: 'board-001',
     name: 'Pixel Wars 2026',
     width: 64,
     height: 64,
@@ -23,7 +23,7 @@ export const MOCK_PIXELBOARDS: IPixelBoard[] = [
     updatedAt: '2026-04-06T18:00:00.000Z',
   },
   {
-    _id: 'board-002',
+    id: 'board-002',
     name: 'MBDS Art Collab',
     width: 32,
     height: 32,
@@ -40,7 +40,7 @@ export const MOCK_PIXELBOARDS: IPixelBoard[] = [
     updatedAt: '2026-04-05T09:00:00.000Z',
   },
   {
-    _id: 'board-003',
+    id: 'board-003',
     name: 'Retro Game Tribute',
     width: 128,
     height: 128,
@@ -58,7 +58,7 @@ export const MOCK_PIXELBOARDS: IPixelBoard[] = [
     updatedAt: '2026-02-28T23:59:59.000Z',
   },
   {
-    _id: 'board-004',
+    id: 'board-004',
     name: 'Sunset Canvas',
     width: 48,
     height: 48,

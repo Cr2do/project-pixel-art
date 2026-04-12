@@ -20,7 +20,7 @@ function UserBoardsPage() {
   const boards = MOCK_PIXELBOARDS;
 
   const totalPixels = boards.reduce(
-    (sum, board) => sum + getUserPixelCount(board, user._id),
+    (sum, board) => sum + getUserPixelCount(board, user.id),
     0,
   );
 
@@ -94,7 +94,7 @@ function UserBoardsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {boards.map((board) => {
-            const myPixels = getUserPixelCount(board, user._id);
+            const myPixels = getUserPixelCount(board, user.id);
             const totalBoardPixels = board.contributions.reduce(
               (sum, c) => sum + c.nb_pixels_placed,
               0,
@@ -105,7 +105,7 @@ function UserBoardsPage() {
                 : 0;
 
             return (
-              <NavLink key={board._id} to={`/boards/${board._id}`}>
+              <NavLink key={board.id} to={`/boards/${board.id}`}>
                 <Card className="transition-shadow hover:shadow-md cursor-pointer h-full">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">

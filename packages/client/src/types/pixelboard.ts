@@ -10,7 +10,7 @@ export enum PixelBoardStatus {
 }
 
 export interface IPixelBoard {
-  _id: string;
+  id: string;
   name: string;
   width: number;
   height: number;

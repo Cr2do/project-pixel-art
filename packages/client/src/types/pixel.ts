@@ -1,5 +1,5 @@
 export interface IPixel {
-  _id: string;
+  id: string;
   pixelBoardId: string;
   userId: string;
   position_x: number;
