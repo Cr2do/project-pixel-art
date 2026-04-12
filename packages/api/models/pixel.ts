@@ -1,8 +1,8 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
 
 export interface IPixel extends Document {
-    pixelBoardId: Schema.Types.ObjectId;
-    userId: Schema.Types.ObjectId;
+    pixelBoardId: Types.ObjectId;
+    userId: Types.ObjectId;
     position_x: number;
     position_y: number;
     color: string;
