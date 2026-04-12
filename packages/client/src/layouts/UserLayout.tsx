@@ -32,9 +32,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/use-theme';
 import { getUserInitials } from '@/utils/user.utils';
-import { MOCK_CURRENT_USER } from '@/mocks/user.mock';
 
 interface NavItem {
   label: string;
@@ -51,11 +51,11 @@ const NAV_ITEMS: NavItem[] = [
 function UserLayout() {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const user = MOCK_CURRENT_USER;
-  const initials = getUserInitials(user.firstname, user.lastname);
+  const { user, logout } = useAuth();
+  const initials = user ? getUserInitials(user.firstname, user.lastname) : '';
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    logout();
     navigate('/login');
   };
 
@@ -143,10 +143,10 @@ function UserLayout() {
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-medium">
-                        {user.firstname} {user.lastname}
+                        {user?.firstname} {user?.lastname}
                       </span>
                       <span className="truncate text-xs text-muted-foreground">
-                        {user.email}
+                        {user?.email}
                       </span>
                     </div>
                   </SidebarMenuButton>

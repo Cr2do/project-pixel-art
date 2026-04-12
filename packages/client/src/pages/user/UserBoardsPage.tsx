@@ -10,17 +10,17 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { MOCK_CURRENT_USER } from '@/mocks/user.mock';
+import { useAuth } from '@/context/AuthContext';
 import { MOCK_PIXELBOARDS } from '@/mocks/pixelboard.mock';
 import { PixelBoardStatus } from '@/types';
 import { STATUS_LABEL, getUserPixelCount } from '@/utils/pixelboard.utils';
 
 function UserBoardsPage() {
-  const user = MOCK_CURRENT_USER;
+  const { user } = useAuth();
   const boards = MOCK_PIXELBOARDS;
 
   const totalPixels = boards.reduce(
-    (sum, board) => sum + getUserPixelCount(board, user.id),
+    (sum, board) => sum + (user ? getUserPixelCount(board, user.id) : 0),
     0,
   );
 
@@ -94,7 +94,7 @@ function UserBoardsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {boards.map((board) => {
-            const myPixels = getUserPixelCount(board, user.id);
+            const myPixels = user ? getUserPixelCount(board, user.id) : 0;
             const totalBoardPixels = board.contributions.reduce(
               (sum, c) => sum + c.nb_pixels_placed,
               0,

@@ -14,7 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ControlledInput } from '@/components/form/ControlledInput';
-import { MOCK_CURRENT_USER } from '@/mocks/user.mock';
+import { useAuth } from '@/context/AuthContext';
+import { UserRole } from '@/types';
 import { ROLE_LABEL, getUserInitials } from '@/utils/user.utils';
 import { formatDateFR } from '@/utils/date.utils';
 import {
@@ -23,16 +24,16 @@ import {
 } from '@/schemas/user.schema';
 
 function UserProfilePage() {
-  const user = MOCK_CURRENT_USER;
-  const initials = getUserInitials(user.firstname, user.lastname);
+  const { user } = useAuth();
+  const initials = user ? getUserInitials(user.firstname, user.lastname) : '';
   const [isEditing, setIsEditing] = useState(false);
 
   const { control, handleSubmit, reset } = useForm<UpdateProfileFormData>({
     resolver: zodResolver(updateProfileSchema),
     defaultValues: {
-      firstname: user.firstname,
-      lastname: user.lastname,
-      email: user.email,
+      firstname: user?.firstname ?? '',
+      lastname: user?.lastname ?? '',
+      email: user?.email ?? '',
     },
   });
 
@@ -66,13 +67,13 @@ function UserProfilePage() {
           </Avatar>
           <div className="text-center sm:text-left space-y-1">
             <h3 className="text-xl font-semibold">
-              {user.firstname} {user.lastname}
+              {user?.firstname} {user?.lastname}
             </h3>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
             <div className="flex items-center gap-2 justify-center sm:justify-start">
-              <Badge variant="secondary">{ROLE_LABEL[user.role]}</Badge>
+              <Badge variant="secondary">{user ? ROLE_LABEL[user.role as UserRole] : ''}</Badge>
               <span className="text-xs text-muted-foreground">
-                Membre depuis {formatDateFR(user.createdAt)}
+                {user ? `Membre depuis ${formatDateFR(user.createdAt)}` : ''}
               </span>
             </div>
           </div>

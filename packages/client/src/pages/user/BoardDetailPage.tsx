@@ -9,15 +9,15 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/context/AuthContext';
 import { MOCK_PIXELBOARDS } from '@/mocks/pixelboard.mock';
-import { MOCK_CURRENT_USER } from '@/mocks/user.mock';
 import { PixelBoardStatus } from '@/types';
 import { STATUS_LABEL, getUserPixelCount } from '@/utils/pixelboard.utils';
 
 function BoardDetailPage() {
   const { id } = useParams<{ id: string }>();
   const board = MOCK_PIXELBOARDS.find((b) => b.id === id);
-  const user = MOCK_CURRENT_USER;
+  const { user } = useAuth();
 
   if (!board) {
     return (
@@ -38,7 +38,7 @@ function BoardDetailPage() {
   }
 
   const isActive = board.status === PixelBoardStatus.IN_PROGRESS;
-  const myPixels = getUserPixelCount(board, user.id);
+  const myPixels = user ? getUserPixelCount(board, user.id) : 0;
   const totalPixels = board.contributions.reduce(
     (sum, c) => sum + c.nb_pixels_placed,
     0,
