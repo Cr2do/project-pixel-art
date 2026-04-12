@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
 
 export interface IPixelBoard extends Document {
     name: string;
@@ -12,7 +12,7 @@ export interface IPixelBoard extends Document {
     createdAt: Date;
     updatedAt: Date;
     contributions: {
-        userId: Schema.Types.ObjectId;
+        userId: Types.ObjectId;
         nb_pixels_placed: number;
         is_author: boolean;
     }[];

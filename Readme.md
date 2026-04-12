@@ -66,3 +66,7 @@ npm install -D <package> --workspace=client
 ```bash
 npm run lint   # Vérifie client et api
 ```
+
+## Architecture du projet
+
+![](structure-react.png)
