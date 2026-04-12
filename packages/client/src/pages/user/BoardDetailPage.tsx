@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { MOCK_PIXELBOARDS } from '@/mocks/pixelboard.mock';
 import { PixelBoardStatus } from '@/types';
 import { STATUS_LABEL, getUserPixelCount } from '@/utils/pixelboard.utils';
+import { PixelCanvas } from '@/components/canvas/PixelCanvas';
 
 function BoardDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -125,32 +126,12 @@ function BoardDetailPage() {
 
       <Separator />
 
-      {/* Canvas placeholder + Ma contribution */}
-      {/* Canvas - pleine largeur */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle>Canvas</CardTitle>
-          {isActive && (
-            <Button disabled>
-              Dessiner (bientôt disponible)
-            </Button>
-          )}
         </CardHeader>
         <CardContent>
-          <div
-            className="flex items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 w-full"
-            style={{
-              aspectRatio: `${board.width}/${board.height}`,
-              minHeight: '400px',
-              maxHeight: '70vh',
-            }}
-          >
-            <div className="text-center text-muted-foreground">
-              <Grid3X3 className="size-16 mx-auto mb-3" />
-              <p className="text-lg font-medium">Canvas {board.width}x{board.height}</p>
-              <p className="text-sm">Zone de dessin a venir</p>
-            </div>
-          </div>
+          <PixelCanvas board={board} isActive={isActive} />
         </CardContent>
       </Card>
 

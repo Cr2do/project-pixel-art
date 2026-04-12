@@ -1,73 +1,92 @@
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { validateEmail } from '../../lib/auth-validation';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ControlledInput } from '@/components/form/ControlledInput';
+import { useAuth } from '@/context/AuthContext';
+import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/schemas/auth.schema';
 
 function ForgotPasswordPage() {
-	const { forgotPassword } = useAuth();
-	const [email, setEmail] = useState('');
-	const [loading, setLoading] = useState(false);
-	const [message, setMessage] = useState<string | null>(null);
-	const [resetPath, setResetPath] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
+  const { forgotPassword } = useAuth();
+  const [resetPath, setResetPath] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		setLoading(true);
-		setError(null);
-		setMessage(null);
-		setResetPath(null);
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
+  });
 
-		const emailError = validateEmail(email);
-		if (emailError) {
-			setError(emailError);
-			setLoading(false);
-			return;
-		}
+  const onSubmit = async (data: ForgotPasswordFormData) => {
+    setServerError(null);
+    setSuccessMessage(null);
+    setResetPath(null);
+    try {
+      const response = await forgotPassword(data.email);
+      setSuccessMessage(response.message);
+      setResetPath(response.resetPath ?? null);
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+    }
+  };
 
-		try {
-			const response = await forgotPassword(email);
-			setMessage(response.message);
-			setResetPath(response.resetPath ?? null);
-		} catch (submissionError) {
-			setError(submissionError instanceof Error ? submissionError.message : 'Unexpected error.');
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	return (
-		<div className="min-h-screen flex items-center justify-center px-4">
-			<div className="p-8 rounded shadow-md w-full max-w-sm">
-				<h1 className="text-2xl font-bold mb-2">Forgot password</h1>
-				<p className="text-sm text-gray-600 mb-6">Enter your email to receive a reset link (mock).</p>
-				<form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-					<input
-						type="email"
-						placeholder="Email"
-						value={email}
-						onChange={(event) => setEmail(event.target.value)}
-						className="border p-2 rounded"
-						required
-					/>
-					<button type="submit" className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-60" disabled={loading}>
-						{loading ? 'Sending...' : 'Send'}
-					</button>
-				</form>
-				{message && <p className="text-green-700 mt-4 text-sm">{message}</p>}
-				{resetPath && (
-					<p className="text-sm mt-2">
-						<Link to={resetPath} className="text-blue-600 hover:underline">Open mock reset page</Link>
-					</p>
-				)}
-				{error && <p className="text-red-700 mt-4 text-sm">{error}</p>}
-				<div className="mt-6 text-sm">
-					<Link to="/login" className="text-blue-600 hover:underline">Back to login</Link>
-				</div>
-			</div>
-		</div>
-	);
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl">Mot de passe oublié</CardTitle>
+          <CardDescription>
+            Entrez votre email pour recevoir un lien de réinitialisation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <ControlledInput
+              control={control}
+              name="email"
+              label="Email"
+              type="email"
+              placeholder="vous@exemple.com"
+            />
+            {serverError && (
+              <p className="text-sm text-destructive">{serverError}</p>
+            )}
+            {successMessage && (
+              <p className="text-sm text-green-600">{successMessage}</p>
+            )}
+            {resetPath && (
+              <Link
+                to={resetPath}
+                className="block text-sm text-primary hover:underline"
+              >
+                Ouvrir le lien de réinitialisation (mock)
+              </Link>
+            )}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Envoi...' : 'Envoyer'}
+            </Button>
+          </form>
+          <div className="mt-4 text-sm">
+            <Link to="/login" className="text-primary hover:underline">
+              Retour à la connexion
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 export default ForgotPasswordPage;
-

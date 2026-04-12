@@ -1,88 +1,112 @@
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { validateEmail, validateName, validatePassword } from '../../lib/auth-validation';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ControlledInput } from '@/components/form/ControlledInput';
+import { useAuth } from '@/context/AuthContext';
+import { UserRole } from '@/types';
+import { registerSchema, type RegisterFormData } from '@/schemas/auth.schema';
 
 function RegisterPage() {
-	const navigate = useNavigate();
-	const { register, isAuthenticated, isAdmin } = useAuth();
-	const [firstname, setFirstname] = useState('');
-	const [lastname, setLastname] = useState('');
-	const [email, setEmail] = useState('');
-	const [password, setPassword] = useState('');
-	const [confirmPassword, setConfirmPassword] = useState('');
-	const [error, setError] = useState<string | null>(null);
-	const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { register, isAuthenticated, isAdmin } = useAuth();
+  const [serverError, setServerError] = useState<string | null>(null);
 
-	if (isAuthenticated) {
-		return <Navigate to={isAdmin ? '/admin' : '/dashboard'} replace />;
-	}
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      firstname: '',
+      lastname: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
-	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		setError(null);
+  if (isAuthenticated) {
+    return <Navigate to={isAdmin ? '/admin' : '/dashboard'} replace />;
+  }
 
-		const firstnameError = validateName(firstname, 'First name');
-		if (firstnameError) {
-			setError(firstnameError);
-			return;
-		}
+  const onSubmit = async (data: RegisterFormData) => {
+    setServerError(null);
+    try {
+      const user = await register(data);
+      navigate(user.role === UserRole.ADMIN ? '/admin' : '/dashboard', { replace: true });
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+    }
+  };
 
-		const lastnameError = validateName(lastname, 'Last name');
-		if (lastnameError) {
-			setError(lastnameError);
-			return;
-		}
-
-		const emailError = validateEmail(email);
-		if (emailError) {
-			setError(emailError);
-			return;
-		}
-
-		const passwordError = validatePassword(password);
-		if (passwordError) {
-			setError(passwordError);
-			return;
-		}
-
-		if (password !== confirmPassword) {
-			setError('Passwords do not match.');
-			return;
-		}
-
-		setLoading(true);
-		try {
-			const user = await register({ firstname, lastname, email, password });
-			navigate(user.role === 'ADMIN' ? '/admin' : '/dashboard', { replace: true });
-		} catch (submissionError) {
-			setError(submissionError instanceof Error ? submissionError.message : 'Unexpected error.');
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	return (
-		<div className="min-h-screen flex items-center justify-center px-4">
-			<div className="p-8 rounded shadow-md w-full max-w-sm">
-				<h1 className="text-2xl font-bold mb-6">Register</h1>
-				<form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-					<input type="text" placeholder="First name" value={firstname} onChange={(event) => setFirstname(event.target.value)} className="border p-2 rounded" required />
-					<input type="text" placeholder="Last name" value={lastname} onChange={(event) => setLastname(event.target.value)} className="border p-2 rounded" required />
-					<input type="email" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} className="border p-2 rounded" required />
-					<input type="password" placeholder="Password" value={password} onChange={(event) => setPassword(event.target.value)} className="border p-2 rounded" minLength={8} required />
-					<input type="password" placeholder="Confirm password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="border p-2 rounded" minLength={8} required />
-					<button type="submit" className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-60" disabled={loading}>
-						{loading ? 'Creating account...' : 'Create account'}
-					</button>
-				</form>
-				{error && <p className="text-red-700 mt-4 text-sm">{error}</p>}
-				<div className="mt-6 text-sm">
-					<Link to="/login" className="text-blue-600 hover:underline">I already have an account</Link>
-				</div>
-			</div>
-		</div>
-	);
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl">Créer un compte</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ControlledInput
+                control={control}
+                name="firstname"
+                label="Prénom"
+                placeholder="Jean"
+              />
+              <ControlledInput
+                control={control}
+                name="lastname"
+                label="Nom"
+                placeholder="Dupont"
+              />
+            </div>
+            <ControlledInput
+              control={control}
+              name="email"
+              label="Email"
+              type="email"
+              placeholder="vous@exemple.com"
+            />
+            <ControlledInput
+              control={control}
+              name="password"
+              label="Mot de passe"
+              type="password"
+              placeholder="••••••••"
+            />
+            <ControlledInput
+              control={control}
+              name="confirmPassword"
+              label="Confirmer le mot de passe"
+              type="password"
+              placeholder="••••••••"
+            />
+            {serverError && (
+              <p className="text-sm text-destructive">{serverError}</p>
+            )}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Création...' : 'Créer mon compte'}
+            </Button>
+          </form>
+          <div className="mt-4 text-sm">
+            <Link to="/login" className="text-primary hover:underline">
+              J'ai déjà un compte
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 export default RegisterPage;

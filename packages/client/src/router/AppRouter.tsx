@@ -3,7 +3,11 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext';
 import HomeUnavailablePage from '../pages/HomeUnavailablePage';
 import NotFoundPage from '../pages/NotFoundPage';
-import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
+import AdminOverviewPage from '../pages/admin/AdminOverviewPage';
+import AdminUsersPage from '../pages/admin/AdminUsersPage';
+import AdminBoardsPage from '../pages/admin/AdminBoardsPage';
+import AdminModerationPage from '../pages/admin/AdminModerationPage';
+import AdminSettingsPage from '../pages/admin/AdminSettingsPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
@@ -12,6 +16,7 @@ import BoardDetailPage from '../pages/user/BoardDetailPage';
 import UserBoardsPage from '../pages/user/UserBoardsPage';
 import UserDashboardPage from '../pages/user/UserDashboardPage';
 import UserProfilePage from '../pages/user/UserProfilePage';
+import AdminLayout from '../layouts/AdminLayout';
 import UserLayout from '../layouts/UserLayout';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -52,7 +57,16 @@ function AppRouter() {
 		{
 			element: <ProtectedRoute isAllowed={isAuthenticated && isAdmin} redirectTo="/dashboard" />,
 			children: [
-				{ path: '/admin', element: <AdminDashboardPage /> },
+				{
+					element: <AdminLayout />,
+					children: [
+						{ path: '/admin', element: <AdminOverviewPage /> },
+						{ path: '/admin/users', element: <AdminUsersPage /> },
+						{ path: '/admin/boards', element: <AdminBoardsPage /> },
+						{ path: '/admin/moderation', element: <AdminModerationPage /> },
+						{ path: '/admin/settings', element: <AdminSettingsPage /> },
+					],
+				},
 			],
 		},
 		{
