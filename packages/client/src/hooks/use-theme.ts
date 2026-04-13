@@ -1,37 +1,33 @@
-import { useEffect, useState } from 'react';
-
-export enum Theme {
-  LIGHT = 'light',
-  DARK = 'dark',
-}
+import { useState } from 'react';
 
 const STORAGE_KEY = 'pixelboard-theme';
-const DARK_SCHEME_QUERY = '(prefers-color-scheme: dark)';
 
-function isValidTheme(value: string | null): value is Theme {
-  return value === Theme.LIGHT || value === Theme.DARK;
+function resolveTheme(): 'light' | 'dark' {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function getInitialTheme(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (isValidTheme(stored)) return stored;
-
-  return window.matchMedia(DARK_SCHEME_QUERY).matches ? Theme.DARK : Theme.LIGHT;
+function applyTheme(theme: 'light' | 'dark') {
+  document.documentElement.classList.toggle('dark', theme === 'dark');
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const theme = resolveTheme();
+    applyTheme(theme);
+    return theme === 'dark';
+  });
 
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle(Theme.DARK, theme === Theme.DARK);
-    localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
+  const toggleTheme = () => {
+    setIsDark((prev) => {
+      const next = !prev;
+      const theme = next ? 'dark' : 'light';
+      applyTheme(theme);
+      localStorage.setItem(STORAGE_KEY, theme);
+      return next;
+    });
+  };
 
-  const toggleTheme = () =>
-    setTheme((prev) => (prev === Theme.DARK ? Theme.LIGHT : Theme.DARK));
-
-  const isDark = theme === Theme.DARK;
-
-  return { theme, isDark, setTheme, toggleTheme };
+  return { isDark, toggleTheme };
 }
