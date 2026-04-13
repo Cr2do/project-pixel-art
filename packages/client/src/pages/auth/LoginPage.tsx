@@ -1,30 +1,30 @@
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ControlledInput } from '@/components/ui/ControlledInput';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
+import { getApiError } from '@/services/api.utils';
 import { loginSchema, type LoginFormData } from './auth.schema';
 
 function LoginPage() {
   const navigate = useNavigate();
   const { login, isAuthenticated, isAdmin } = useAuth();
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
-    control,
+    register,
     handleSubmit,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
@@ -35,12 +35,11 @@ function LoginPage() {
   }
 
   const onSubmit = async (data: LoginFormData) => {
-    setServerError(null);
     try {
       const user = await login(data);
       navigate(user.role === UserRole.ADMIN ? '/admin' : '/dashboard', { replace: true });
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+      toast.error(getApiError(err));
     }
   };
 
@@ -59,23 +58,16 @@ function LoginPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <ControlledInput
-                control={control}
-                name="email"
-                label="Email"
-                type="email"
-                placeholder="vous@exemple.com"
-              />
-              <ControlledInput
-                control={control}
-                name="password"
-                label="Mot de passe"
-                type="password"
-                placeholder="••••••••"
-              />
-              {serverError && (
-                <p className="text-sm text-destructive">{serverError}</p>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="vous@exemple.com" {...register('email')} />
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Mot de passe</Label>
+                <Input id="password" type="password" placeholder="••••••••" {...register('password')} />
+                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+              </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? 'Connexion…' : 'Se connecter'}
               </Button>

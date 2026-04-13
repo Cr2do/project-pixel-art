@@ -10,7 +10,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ControlledInput } from '@/components/ui/ControlledInput';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
 import { forgotPasswordSchema, type ForgotPasswordFormData } from './auth.schema';
@@ -22,9 +23,9 @@ function ForgotPasswordPage() {
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
-    control,
+    register,
     handleSubmit,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: '' },
@@ -61,13 +62,11 @@ function ForgotPasswordPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <ControlledInput
-                control={control}
-                name="email"
-                label="Email"
-                type="email"
-                placeholder="vous@exemple.com"
-              />
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="vous@exemple.com" {...register('email')} />
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              </div>
               {serverError && (
                 <p className="text-sm text-destructive">{serverError}</p>
               )}

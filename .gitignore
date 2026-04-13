@@ -8,6 +8,8 @@ dist/
 
 # ide
 .vscode/
+.claude/
+.idea/
 
 # misc
 .DS_Store

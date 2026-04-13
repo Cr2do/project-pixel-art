@@ -10,7 +10,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ControlledInput } from '@/components/ui/ControlledInput';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
 import { resetPasswordSchema, type ResetPasswordFormData } from './auth.schema';
@@ -23,9 +24,9 @@ function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
 
   const {
-    control,
+    register,
     handleSubmit,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { password: '', confirmPassword: '' },
@@ -74,20 +75,16 @@ function ResetPasswordPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <ControlledInput
-                  control={control}
-                  name="password"
-                  label="Nouveau mot de passe"
-                  type="password"
-                  placeholder="••••••••"
-                />
-                <ControlledInput
-                  control={control}
-                  name="confirmPassword"
-                  label="Confirmer le mot de passe"
-                  type="password"
-                  placeholder="••••••••"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="password">Nouveau mot de passe</Label>
+                  <Input id="password" type="password" placeholder="••••••••" {...register('password')} />
+                  {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+                  <Input id="confirmPassword" type="password" placeholder="••••••••" {...register('confirmPassword')} />
+                  {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
+                </div>
                 {serverError && (
                   <p className="text-sm text-destructive">{serverError}</p>
                 )}
