@@ -22,7 +22,7 @@ function AdminOverviewPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetch = async () => {
+    const loadData = async () => {
       try {
         const response = await getAdminDashboardData();
         setData(response);
@@ -32,7 +32,7 @@ function AdminOverviewPage() {
         setLoading(false);
       }
     };
-    void fetch();
+    void loadData();
   }, []);
 
   if (loading) return <p className="text-sm text-muted-foreground">Chargement...</p>;

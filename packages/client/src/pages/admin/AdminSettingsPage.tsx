@@ -23,7 +23,7 @@ function AdminSettingsPage() {
   const [feedback, setFeedback] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetch = async () => {
+    const loadData = async () => {
       try {
         const response = await getAdminDashboardData();
         setData(response);
@@ -33,7 +33,7 @@ function AdminSettingsPage() {
         setLoading(false);
       }
     };
-    void fetch();
+    void loadData();
   }, []);
 
   const defaultDelay = useMemo(() => {
