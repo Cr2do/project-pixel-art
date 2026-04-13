@@ -1,68 +1,73 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import {
-	forgotPassword as forgotPasswordService,
-	getCurrentSessionUser,
-	login as loginService,
-	logout as logoutService,
-	resetPassword as resetPasswordService,
-	register as registerService,
-	type ForgotPasswordResult,
-	type LoginPayload,
-	type ResetPasswordPayload,
-	type RegisterPayload,
-	type SessionUser,
-} from '../services/auth.service';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import * as authService from '@/services/auth.service';
+import type { IUser } from '@/types';
 
 interface AuthContextValue {
-	user: SessionUser | null;
-	isAuthenticated: boolean;
-	isAdmin: boolean;
-	login: (payload: LoginPayload) => Promise<SessionUser>;
-	register: (payload: RegisterPayload) => Promise<SessionUser>;
-	forgotPassword: (email: string) => Promise<ForgotPasswordResult>;
-	resetPassword: (payload: ResetPasswordPayload) => Promise<void>;
-	logout: () => void;
+  user: IUser | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  isLoading: boolean;
+  login: (payload: authService.LoginPayload) => Promise<IUser>;
+  register: (payload: authService.RegisterPayload) => Promise<IUser>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-interface AuthProviderProps {
-	children: ReactNode;
-}
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<IUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-export function AuthProvider({ children }: AuthProviderProps) {
-	const [user, setUser] = useState<SessionUser | null>(() => getCurrentSessionUser());
+  useEffect(() => {
+    const token = authService.getStoredToken();
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+    authService
+      .me()
+      .then(setUser)
+      .catch(() => authService.clearToken())
+      .finally(() => setIsLoading(false));
+  }, []);
 
-	const value = useMemo<AuthContextValue>(() => ({
-		user,
-		isAuthenticated: Boolean(user),
-		isAdmin: user?.role === 'ADMIN',
-		login: async (payload) => {
-			const sessionUser = await loginService(payload);
-			setUser(sessionUser);
-			return sessionUser;
-		},
-		register: async (payload) => {
-			const sessionUser = await registerService(payload);
-			setUser(sessionUser);
-			return sessionUser;
-		},
-		forgotPassword: async (email) => forgotPasswordService(email),
-		resetPassword: async (payload) => resetPasswordService(payload),
-		logout: () => {
-			logoutService();
-			setUser(null);
-		},
-	}), [user]);
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      isAuthenticated: Boolean(user),
+      isAdmin: user?.role === 'ADMIN',
+      isLoading,
+      login: async (payload) => {
+        const u = await authService.login(payload);
+        setUser(u);
+        return u;
+      },
+      register: async (payload) => {
+        const u = await authService.register(payload);
+        setUser(u);
+        return u;
+      },
+      logout: () => {
+        authService.logout();
+        setUser(null);
+      },
+    }),
+    [user, isLoading],
+  );
 
-	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-	const context = useContext(AuthContext);
-	if (!context) {
-		throw new Error('useAuth must be used within AuthProvider.');
-	}
-	return context;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider.');
+  return context;
 }
-
