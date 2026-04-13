@@ -38,7 +38,7 @@ export async function register(input: RegisterInput): Promise<Record<string, unk
   });
 
   const token = generateToken({ userId: user._id.toString(), role: user.role });
-  const userObj = user.toObject() as unknown as Record<string, unknown>;
+  const userObj = user.toObject({ virtuals: true }) as unknown as Record<string, unknown>;
   delete userObj.password;
 
   return { token, user: userObj };
@@ -52,7 +52,7 @@ export async function login(input: LoginInput): Promise<Record<string, unknown>>
   if (!valid) throw new UnauthorizedError('Email ou mot de passe incorrect');
 
   const token = generateToken({ userId: user._id.toString(), role: user.role });
-  const userObj = user.toObject() as unknown as Record<string, unknown>;
+  const userObj = user.toObject({ virtuals: true }) as unknown as Record<string, unknown>;
   delete userObj.password;
 
   return { token, user: userObj };

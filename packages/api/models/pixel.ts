@@ -35,6 +35,7 @@ const pixelSchema = new Schema<IPixel>({
     },
 }, {
     timestamps: true,
+    toJSON: { virtuals: true },
 });
 
 export const Pixel = model<IPixel>('Pixel', pixelSchema);

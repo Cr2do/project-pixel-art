@@ -76,6 +76,7 @@ const pixelBoardSchema = new Schema<IPixelBoard>({
     contributions: [contributionSchema],
 }, {
     timestamps: true,
+    toJSON: { virtuals: true },
 });
 
 export const PixelBoard = model<IPixelBoard>('PixelBoard', pixelBoardSchema);
