@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import HomeUnavailablePage from '../pages/HomeUnavailablePage';
+import HomePage from '../pages/HomePage';
 import NotFoundPage from '../pages/NotFoundPage';
 import AdminOverviewPage from '../pages/admin/AdminOverviewPage';
 import AdminUsersPage from '../pages/admin/AdminUsersPage';
@@ -71,7 +71,7 @@ function AppRouter() {
 		},
 		{
 			path: '/',
-			element: <HomeUnavailablePage />,
+			element: <HomePage />,
 		},
 		{
 			path: '*',
