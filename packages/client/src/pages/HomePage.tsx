@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Clock,
@@ -11,6 +12,7 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,10 +24,12 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_PIXELBOARDS } from '@/services/mocks';
-import { PixelBoardStatus } from '@/types';
+import * as boardService from '@/services/pixelboard.service';
+import { getApiError } from '@/services/api.utils';
+import { PixelBoardStatus, type IPixelBoard } from '@/types';
 import { STATUS_LABEL } from '@/utils/pixelboard.utils';
 
 const FEATURES = [
@@ -280,9 +284,16 @@ function FeaturesSection() {
 }
 
 function ActiveBoardsSection() {
-  const activeBoards = MOCK_PIXELBOARDS.filter(
-    (b) => b.status === PixelBoardStatus.IN_PROGRESS,
-  );
+  const [activeBoards, setActiveBoards] = useState<IPixelBoard[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    boardService
+      .getAll()
+      .then((boards) => setActiveBoards(boards.filter((b) => b.status === PixelBoardStatus.IN_PROGRESS)))
+      .catch((err) => toast.error(getApiError(err)))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <section id="boards" className="py-20 bg-muted/20">
@@ -302,7 +313,23 @@ function ActiveBoardsSection() {
           </Button>
         </div>
 
-        {activeBoards.length === 0 ? (
+        {loading ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} className="overflow-hidden">
+                <Skeleton className="h-32 w-full rounded-none" />
+                <CardHeader className="pb-2">
+                  <Skeleton className="h-5 w-32 mb-1" />
+                  <Skeleton className="h-3 w-20" />
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : activeBoards.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <Grid3X3 className="size-12 text-muted-foreground mb-4" />
