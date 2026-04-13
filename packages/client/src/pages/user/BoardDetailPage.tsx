@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_PIXELBOARDS } from '@/mocks/pixelboard.mock';
+import { MOCK_PIXELBOARDS } from '@/services/mocks';
 import { PixelBoardStatus } from '@/types';
 import { STATUS_LABEL, getUserPixelCount } from '@/utils/pixelboard.utils';
 import { PixelCanvas } from '@/components/canvas/PixelCanvas';

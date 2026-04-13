@@ -16,8 +16,8 @@ import BoardDetailPage from '../pages/user/BoardDetailPage';
 import UserBoardsPage from '../pages/user/UserBoardsPage';
 import UserDashboardPage from '../pages/user/UserDashboardPage';
 import UserProfilePage from '../pages/user/UserProfilePage';
-import AdminLayout from '../layouts/AdminLayout';
-import UserLayout from '../layouts/UserLayout';
+import AdminLayout from '../components/layouts/AdminLayout';
+import UserLayout from '../components/layouts/UserLayout';
 import ProtectedRoute from './ProtectedRoute';
 
 function AppRouter() {

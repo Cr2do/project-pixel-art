@@ -10,10 +10,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ControlledInput } from '@/components/form/ControlledInput';
+import { ControlledInput } from '@/components/ui/ControlledInput';
 import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
-import { resetPasswordSchema, type ResetPasswordFormData } from '@/schemas/auth.schema';
+import { resetPasswordSchema, type ResetPasswordFormData } from './auth.schema';
 
 function ResetPasswordPage() {
   const navigate = useNavigate();

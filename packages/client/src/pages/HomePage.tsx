@@ -8,7 +8,10 @@ import {
   Grid3X3,
   Zap,
   Trophy,
+  Sun,
+  Moon,
 } from 'lucide-react';
+import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -21,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_PIXELBOARDS } from '@/mocks/pixelboard.mock';
+import { MOCK_PIXELBOARDS } from '@/services/mocks';
 import { PixelBoardStatus } from '@/types';
 import { STATUS_LABEL } from '@/utils/pixelboard.utils';
 
@@ -61,6 +64,7 @@ const STATS = [
 
 function HomeNavbar() {
   const { isAuthenticated, isAdmin } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-sm">
@@ -77,6 +81,15 @@ function HomeNavbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            aria-label="Changer le thème"
+          >
+            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+
           {isAuthenticated ? (
             <Button asChild>
               <Link to={isAdmin ? '/admin' : '/dashboard'}>
@@ -311,7 +324,7 @@ function ActiveBoardsSection() {
                   className="group overflow-hidden transition-shadow hover:shadow-lg"
                 >
                   {/* Mini pixel preview */}
-                  <div className="h-32 bg-gradient-to-br from-primary/5 to-primary/20 flex items-center justify-center border-b">
+                  <div className="h-32 bg-linear-to-br from-primary/5 to-primary/20 flex items-center justify-center border-b">
                     <div
                       className="rounded opacity-80"
                       style={{

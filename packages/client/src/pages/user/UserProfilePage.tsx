@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ControlledInput } from '@/components/form/ControlledInput';
+import { ControlledInput } from '@/components/ui/ControlledInput';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
 import { ROLE_LABEL, getUserInitials } from '@/utils/user.utils';
@@ -21,7 +21,7 @@ import { formatDateFR } from '@/utils/date.utils';
 import {
   updateProfileSchema,
   type UpdateProfileFormData,
-} from '@/schemas/user.schema';
+} from './user.schema';
 
 function UserProfilePage() {
   const { user } = useAuth();

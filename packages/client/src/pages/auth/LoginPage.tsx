@@ -10,11 +10,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ControlledInput } from '@/components/form/ControlledInput';
+import { ControlledInput } from '@/components/ui/ControlledInput';
 import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
-import { loginSchema, type LoginFormData } from '@/schemas/auth.schema';
+import { loginSchema, type LoginFormData } from './auth.schema';
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -56,16 +56,6 @@ function LoginPage() {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Connexion</CardTitle>
-            <CardDescription>
-              Compte de démo&nbsp;:{' '}
-              <code className="rounded bg-muted px-1 py-0.5 text-xs">
-                admin@pixel-art.dev
-              </code>{' '}
-              /{' '}
-              <code className="rounded bg-muted px-1 py-0.5 text-xs">
-                admin123
-              </code>
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

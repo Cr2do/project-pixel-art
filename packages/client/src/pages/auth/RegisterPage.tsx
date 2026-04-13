@@ -10,11 +10,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ControlledInput } from '@/components/form/ControlledInput';
+import { ControlledInput } from '@/components/ui/ControlledInput';
 import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types';
-import { registerSchema, type RegisterFormData } from '@/schemas/auth.schema';
+import { registerSchema, type RegisterFormData } from './auth.schema';
 
 function RegisterPage() {
   const navigate = useNavigate();
