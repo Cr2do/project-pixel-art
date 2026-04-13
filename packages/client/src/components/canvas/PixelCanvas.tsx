@@ -8,14 +8,16 @@ import {
   CANVAS_GRID_MIN_CELL_SIZE,
   getCellFromMouseEvent,
 } from '@/utils/canvas.utils';
-import type { IPixelBoard } from '@/types';
+import type { IPixelBoard, IPixel } from '@/types';
 
 interface PixelCanvasProps {
   board: IPixelBoard;
+  pixels: IPixel[];
   isActive: boolean;
+  onPixelPlace: (x: number, y: number, color: string) => Promise<void>;
 }
 
-export function PixelCanvas({ board, isActive }: PixelCanvasProps) {
+export function PixelCanvas({ board, pixels: initialPixels, isActive, onPixelPlace }: PixelCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cellSizeRef = useRef(8);
@@ -28,7 +30,7 @@ export function PixelCanvas({ board, isActive }: PixelCanvasProps) {
     hoveredCell,
     setHoveredCell,
     placePixel,
-  } = usePixelCanvas(board.width, board.height, board.delay_seconds, board.allow_override);
+  } = usePixelCanvas(board.width, board.height, board.delay_seconds, board.allow_override, initialPixels, onPixelPlace);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
