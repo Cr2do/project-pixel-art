@@ -39,7 +39,7 @@ jobs:
           username: deploy
           key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
           source: "docker/docker-compose.prod.yml,docker/.env.prod"
-          target: /app/
+          target: /home/deploy/
 
       - name: Déployer
         uses: appleboy/ssh-action@v1
@@ -48,7 +48,7 @@ jobs:
           username: deploy
           key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
           script: |
-            cd /app/docker
+            cd /home/deploy/docker
             docker compose -f docker-compose.prod.yml --env-file .env.prod pull
             docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
             docker compose -f docker-compose.prod.yml --env-file .env.prod ps
