@@ -22,4 +22,10 @@ dist/
 .cdk.staging
 cdk.out
 
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+
 *.private.md
