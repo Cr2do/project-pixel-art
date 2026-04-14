@@ -16,14 +16,13 @@ variable "zone" {
     default     = "europe-west1-b"
 }
 
-variable "cluster_name" {
-    description = "PIXEL BOARD TP Cluster Name"
-    type        = string
-    default = "pixel-board-cluster"
-}
-
 variable "environment" {
     description = "PIXEL BOARD TP Environment"
     type        = string
-    default = "develop"
+    default     = "develop"
+}
+
+variable "ssh_public_key" {
+    description = "Clé SSH publique pour l'utilisateur deploy sur la VM"
+    type        = string
 }

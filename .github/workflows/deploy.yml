@@ -1,68 +1,54 @@
-name: Deploy to GKE
+name: Deploy to VM
 
 on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (github SHA or 'latest')"
+        description: "Image tag à déployer (SHA ou 'latest')"
         required: false
         default: "latest"
 
-env:
-  REGION: europe-west1
-  ZONE: europe-west1-b
-  CLUSTER: pixel-board-cluster
-  REGISTRY: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/reactive-pixel-board-registry
-  NAMESPACE: pixel-board
-
 jobs:
   deploy:
-    name: Deploy to GKE
+    name: Deploy via SSH
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          install_components: gke-gcloud-auth-plugin
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v4
-
-      - name: Get GKE credentials
+      - name: Générer le fichier .env.prod
         run: |
-          gcloud container clusters get-credentials ${{ env.CLUSTER }} \
-            --zone ${{ env.ZONE }} \
-            --project ${{ secrets.GCP_PROJECT_ID }}
+          cat > docker/.env.prod << EOF
+          MONGO_ROOT_USERNAME=admin
+          MONGO_ROOT_PASSWORD=${{ secrets.MONGO_ROOT_PASSWORD }}
+          MONGO_DATABASE=pixelboard
+          API_PORT=8000
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES_IN=7d
+          CANVAS_MAX_WIDTH=5000
+          VITE_API_URL=http://${{ vars.SERVER_IP }}:8000
+          IMAGE_TAG=${{ github.event.inputs.image_tag }}
+          GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+          EOF
 
-      - name: Deploy with Helm
-        run: |
-          helm upgrade --install pixel-board deployment/helm/pixel-board \
-            --namespace ${{ env.NAMESPACE }} \
-            --create-namespace \
-            --set image.project=${{ secrets.GCP_PROJECT_ID }} \
-            --set image.tag=${{ github.event.inputs.image_tag }} \
-            --set api.jwtSecret=${{ secrets.JWT_SECRET }} \
-            --set api.staticIp=${{ vars.API_EXTERNAL_IP }} \
-            --set client.staticIp=${{ vars.CLIENT_EXTERNAL_IP }} \
-            --set client.apiUrl=http://${{ vars.API_EXTERNAL_IP }}:8000
+      - name: Copier les fichiers sur la VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.SERVER_IP }}
+          username: deploy
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          source: "docker/docker-compose.prod.yml,docker/.env.prod"
+          target: /app/
 
-      - name: Wait for MongoDB
-        run: kubectl rollout status statefulset/mongodb -n ${{ env.NAMESPACE }} --timeout=5m
-
-      - name: Wait for API
-        run: kubectl rollout status deployment/api-deployment -n ${{ env.NAMESPACE }} --timeout=5m
-
-      - name: Wait for Client
-        run: kubectl rollout status deployment/client-deployment -n ${{ env.NAMESPACE }} --timeout=2m
-
-      - name: Show service endpoints
-        run: kubectl get svc -n ${{ env.NAMESPACE }}
+      - name: Déployer
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.SERVER_IP }}
+          username: deploy
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          script: |
+            cd /app/docker
+            docker compose -f docker-compose.prod.yml --env-file .env.prod pull
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+            docker compose -f docker-compose.prod.yml --env-file .env.prod ps

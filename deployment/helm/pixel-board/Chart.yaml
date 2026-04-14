@@ -1,6 +1,0 @@
-apiVersion: v2
-name: pixel-board
-description: Pixel Board — Full stack deployment (API + Client + MongoDB)
-type: application
-version: 0.1.0
-appVersion: "1.0.0"

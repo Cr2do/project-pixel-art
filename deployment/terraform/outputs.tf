@@ -1,14 +1,5 @@
-
-output "cluster_name" {
-  value = google_container_cluster.primary.name
-}
-
-output "api_external_ip" {
-  value = google_compute_address.api_ip.address
-}
-
-output "client_external_ip" {
-  value = google_compute_address.client_ip.address
+output "server_ip" {
+  value = google_compute_address.server_ip.address
 }
 
 output "registry_url" {

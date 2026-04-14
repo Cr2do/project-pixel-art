@@ -29,3 +29,6 @@ terraform.tfstate.backup
 *.tfvars
 
 *.private.md
+
+terraform-react
+terraform-react.pub
