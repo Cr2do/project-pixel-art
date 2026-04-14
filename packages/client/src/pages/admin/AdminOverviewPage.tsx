@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock3, ShieldCheck, SquareChartGantt, Users } from 'lucide-react';
+import { Clock3, SquareChartGantt, Users } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -70,16 +70,7 @@ function AdminOverviewPage() {
           </CardContent>
         </Card>
 
-        <Card className="sm:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Signalements en attente</CardTitle>
-            <ShieldCheck className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{data.kpis.pendingReports}</div>
-            <p className="text-xs text-muted-foreground">À traiter en modération</p>
-          </CardContent>
-        </Card>
+        {/* Modération supprimée */}
       </div>
 
       <Separator />

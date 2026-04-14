@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Users,
   SquareChartGantt,
-  ShieldCheck,
   Settings,
   LogOut,
   Grid3X3,
@@ -48,7 +47,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', icon: LayoutDashboard, to: '/admin' },
   { label: 'Utilisateurs', icon: Users, to: '/admin/users' },
   { label: 'Boards', icon: SquareChartGantt, to: '/admin/boards' },
-  { label: 'Modération', icon: ShieldCheck, to: '/admin/moderation' },
   { label: 'Paramètres', icon: Settings, to: '/admin/settings' },
 ];
 

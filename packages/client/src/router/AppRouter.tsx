@@ -6,7 +6,6 @@ import NotFoundPage from '../pages/NotFoundPage';
 import AdminOverviewPage from '../pages/admin/AdminOverviewPage';
 import AdminUsersPage from '../pages/admin/AdminUsersPage';
 import AdminBoardsPage from '../pages/admin/AdminBoardsPage';
-import AdminModerationPage from '../pages/admin/AdminModerationPage';
 import AdminSettingsPage from '../pages/admin/AdminSettingsPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import LoginPage from '../pages/auth/LoginPage';
@@ -63,7 +62,6 @@ function AppRouter() {
 						{ path: '/admin', element: <AdminOverviewPage /> },
 						{ path: '/admin/users', element: <AdminUsersPage /> },
 						{ path: '/admin/boards', element: <AdminBoardsPage /> },
-						{ path: '/admin/moderation', element: <AdminModerationPage /> },
 						{ path: '/admin/settings', element: <AdminSettingsPage /> },
 					],
 				},
