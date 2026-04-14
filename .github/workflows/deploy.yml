@@ -55,7 +55,7 @@ jobs:
             --set client.staticIp=${{ vars.CLIENT_EXTERNAL_IP }} \
             --set client.apiUrl=http://${{ vars.API_EXTERNAL_IP }}:8000 \
             --wait \
-            --timeout 3m
+            --timeout 8m
 
       - name: Show service endpoints
         run: kubectl get svc -n ${{ env.NAMESPACE }}
