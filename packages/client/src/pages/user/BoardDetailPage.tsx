@@ -19,6 +19,14 @@ import { getApiError } from '@/services/api.utils';
 import { PixelBoardStatus, type IPixelBoard, type IPixel } from '@/types';
 import { STATUS_LABEL, getUserPixelCount } from '@/utils/pixelboard.utils';
 import { PixelCanvas } from '@/components/canvas/PixelCanvas';
+import { useBoardSocket, type PixelPlacedEvent } from '@/hooks/use-board-socket';
+
+interface ExternalPixel {
+  x: number;
+  y: number;
+  color: string;
+  username?: string;
+}
 
 function BoardDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +36,11 @@ function BoardDetailPage() {
   const [pixels, setPixels] = useState<IPixel[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [externalPixel, setExternalPixel] = useState<ExternalPixel | null>(null);
+
+  useBoardSocket(id ?? '', (event: PixelPlacedEvent) => {
+    setExternalPixel({ x: event.position_x, y: event.position_y, color: event.color, username: event.username });
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -199,6 +212,7 @@ function BoardDetailPage() {
             pixels={pixels}
             isActive={isActive}
             onPixelPlace={handlePixelPlace}
+            externalPixel={externalPixel}
           />
         </CardContent>
       </Card>

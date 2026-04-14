@@ -1,9 +1,12 @@
 import 'dotenv/config';
+import http from 'http';
 import express from 'express';
 import cors from 'cors';
 import { connectDB } from './db';
 import api from './api';
 import { errorHandler } from './middleware/error.middleware';
+import { initIO } from './socket/io';
+import { setupSocket } from './socket';
 
 const app = express();
 const port = 8000;
@@ -18,8 +21,12 @@ app.get('/', (_req, res) => {
 app.use('/api', api);
 app.use(errorHandler);
 
+const httpServer = http.createServer(app);
+const io = initIO(httpServer);
+setupSocket(io);
+
 connectDB().then(() => {
-  app.listen(port, () => {
+  httpServer.listen(port, () => {
     console.log(`Server listening on http://localhost:${port}`);
   });
 });
