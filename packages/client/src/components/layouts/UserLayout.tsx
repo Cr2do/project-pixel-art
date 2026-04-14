@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   User,
   Grid3X3,
+  Compass,
   LogOut,
   Sun,
   Moon,
@@ -24,7 +25,6 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +44,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
+  { label: 'Explorer', icon: Compass, to: '/explore' },
   { label: 'Mes PixelBoards', icon: Grid3X3, to: '/my-boards' },
   { label: 'Mon Profil', icon: User, to: '/profile' },
 ];

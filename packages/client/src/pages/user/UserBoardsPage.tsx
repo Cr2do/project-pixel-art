@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Grid3X3, ArrowUpDown, Plus } from 'lucide-react';
+import { Grid3X3, ArrowUpDown, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const PAGE_SIZE = 6;
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -131,14 +133,27 @@ function UserBoardsPage() {
   const { user } = useAuth();
   const [boards, setBoards] = useState<IPixelBoard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(boards.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = useMemo(
+    () => boards.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [boards, currentPage],
+  );
 
   useEffect(() => {
     boardService
       .getAll()
-      .then(setBoards)
+      .then((all) => {
+        const mine = user
+          ? all.filter((b) => b.contributions.some((c) => c.userId === user.id))
+          : [];
+        setBoards(mine);
+      })
       .catch((err) => toast.error(getApiError(err)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   const totalPixels = boards.reduce(
     (sum, board) => sum + (user ? getUserPixelCount(board, user.id) : 0),
@@ -226,7 +241,7 @@ function UserBoardsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {boards.map((board) => {
+          {paginated.map((board) => {
             const myPixels = user ? getUserPixelCount(board, user.id) : 0;
             const totalBoardPixels = board.contributions.reduce(
               (sum, c) => sum + c.nb_pixels_placed,
@@ -274,6 +289,35 @@ function UserBoardsPage() {
               </NavLink>
             );
           })}
+        </div>
+      )}
+
+      {!loading && boards.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {boards.length} board{boards.length > 1 ? 's' : ''} —
+            page {currentPage} sur {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => p - 1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="size-4" />
+              Précédent
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Suivant
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
