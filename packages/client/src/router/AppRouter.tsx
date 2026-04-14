@@ -13,6 +13,7 @@ import RegisterPage from '../pages/auth/RegisterPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 import BoardDetailPage from '../pages/user/BoardDetailPage';
 import UserBoardsPage from '../pages/user/UserBoardsPage';
+import ExploreBoardsPage from '../pages/user/ExploreBoardsPage';
 import UserDashboardPage from '../pages/user/UserDashboardPage';
 import UserProfilePage from '../pages/user/UserProfilePage';
 import AdminLayout from '../components/layouts/AdminLayout';
@@ -57,17 +58,9 @@ function AppRouter() {
 					children: [
 						{ path: '/dashboard', element: <UserDashboardPage /> },
 						{ path: '/profile', element: <UserProfilePage /> },
-						// For admins, we want a single sidebar/menu coming from AdminLayout.
-						// So we keep /my-boards under the user layout only for non-admin accounts.
-						{
-							path: '/my-boards',
-							element: <ProtectedRoute isAllowed={!isAdmin} redirectTo="/admin/my-boards" />,
-							children: [{ element: <UserBoardsPage /> }],
-						},
-						{
-							path: '/boards/:id',
-							element: isAdmin ? <AdminBoardRedirect /> : <BoardDetailPage />,
-						},
+						{ path: '/explore', element: <ExploreBoardsPage /> },
+						{ path: '/my-boards', element: <UserBoardsPage /> },
+						{ path: '/boards/:id', element: <BoardDetailPage /> },
 					],
 				},
 			],

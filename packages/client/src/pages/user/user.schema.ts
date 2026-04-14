@@ -21,6 +21,12 @@ export const createBoardSchema = z.object({
     .min(0, 'Minimum 0 seconde')
     .max(3600, 'Maximum 3600 secondes'),
   allow_override: z.boolean(),
+  endAt: z
+    .string()
+    .optional()
+    .refine((value) => !value || !Number.isNaN(Date.parse(value)), {
+      message: 'Date de fin invalide',
+    }),
 });
 
 export type CreateBoardFormData = z.infer<typeof createBoardSchema>;

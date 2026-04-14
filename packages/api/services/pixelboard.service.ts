@@ -33,10 +33,13 @@ async function computeNextPosition(
 
 export async function createPixelBoard(input: CreatePixelBoardInput & { authorUserId: string }): Promise<IPixelBoard> {
   const { position_x, position_y } = await computeNextPosition(input.width, input.height);
+  const hasExpiredEndDate = input.endAt ? new Date(input.endAt).getTime() <= Date.now() : false;
+
   return PixelBoard.create({
     ...input,
     position_x,
     position_y,
+    status: hasExpiredEndDate ? 'FINISHED' : input.status,
     contributions: [{
       userId: new Types.ObjectId(input.authorUserId),
       nb_pixels_placed: 0,
@@ -54,16 +57,12 @@ export async function findById(id: string): Promise<IPixelBoard | null> {
 }
 
 export async function updatePixelBoard(id: string, input: UpdatePixelBoardInput): Promise<IPixelBoard> {
-  // Ne pas écraser des champs avec `undefined` lors des updates partielles.
-  const setPayload = Object.fromEntries(
-    Object.entries(input).filter(([, v]) => v !== undefined),
-  );
+  const updateInput: UpdatePixelBoardInput = { ...input };
+  if (updateInput.endAt && new Date(updateInput.endAt).getTime() <= Date.now()) {
+    updateInput.status = 'FINISHED';
+  }
 
-  const board = await PixelBoard.findByIdAndUpdate(
-    id,
-    { $set: setPayload },
-    { new: true, runValidators: true },
-  );
+  const board = await PixelBoard.findByIdAndUpdate(id, updateInput, { new: true, runValidators: true });
   if (!board) throw new NotFoundError('PixelBoard introuvable');
   return board;
 }
