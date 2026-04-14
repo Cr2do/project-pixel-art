@@ -31,6 +31,16 @@ interface AuthResponse {
   user: ApiUser;
 }
 
+export interface ForgotPasswordResponse {
+  message: string;
+  resetPath?: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  password: string;
+}
+
 function mapUser(u: ApiUser): IUser {
   return {
     id: (u.id ?? u._id) as string,
@@ -66,6 +76,16 @@ export async function register(payload: RegisterPayload): Promise<IUser> {
 export async function me(): Promise<IUser> {
   const { data } = await api.get<ApiUser>('/auth/me');
   return mapUser(data);
+}
+
+export async function forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+  const { data } = await api.post<ForgotPasswordResponse>('/auth/forgot-password', { email });
+  return data;
+}
+
+export async function resetPassword(payload: ResetPasswordPayload): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>('/auth/reset-password', payload);
+  return data;
 }
 
 export function logout(): void {
