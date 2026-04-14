@@ -93,6 +93,16 @@ export async function adminGetPixelBoards(): Promise<IPixelBoard[]> {
   return data;
 }
 
+export type AdminCreatePixelBoardPayload = Pick<
+  IPixelBoard,
+  'name' | 'width' | 'height' | 'delay_seconds' | 'allow_override' | 'status'
+>;
+
+export async function adminCreatePixelBoard(payload: AdminCreatePixelBoardPayload): Promise<IPixelBoard> {
+  const { data } = await api.post<IPixelBoard>('/admin/pixelboards', payload);
+  return data;
+}
+
 export type AdminUpdatePixelBoardPayload = Partial<
   Pick<IPixelBoard, 'name' | 'width' | 'height' | 'delay_seconds' | 'allow_override' | 'status'>
 >;

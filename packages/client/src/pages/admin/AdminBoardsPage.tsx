@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
   adminDeletePixelBoard,
+  adminCreatePixelBoard,
   adminUpdatePixelBoard,
   getAdminDashboardData,
   PixelBoardStatus,
@@ -37,12 +38,20 @@ function AdminBoardsPage() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [selectedBoard, setSelectedBoard] = useState<AdminPixelBoard | null>(null);
 
   const [editName, setEditName] = useState('');
   const [editDelay, setEditDelay] = useState<number>(60);
   const [editAllowOverride, setEditAllowOverride] = useState(false);
   const [editStatus, setEditStatus] = useState<PixelBoardStatus>(PixelBoardStatus.IN_PROGRESS);
+
+  const [createName, setCreateName] = useState('');
+  const [createWidth, setCreateWidth] = useState<number>(32);
+  const [createHeight, setCreateHeight] = useState<number>(32);
+  const [createDelay, setCreateDelay] = useState<number>(60);
+  const [createAllowOverride, setCreateAllowOverride] = useState(false);
+  const [createStatus, setCreateStatus] = useState<PixelBoardStatus>(PixelBoardStatus.IN_PROGRESS);
 
   useEffect(() => {
     const loadData = async () => {
@@ -117,6 +126,38 @@ function AdminBoardsPage() {
     }
   };
 
+  const openCreate = () => {
+    setCreateName('');
+    setCreateWidth(32);
+    setCreateHeight(32);
+    setCreateDelay(60);
+    setCreateAllowOverride(false);
+    setCreateStatus(PixelBoardStatus.IN_PROGRESS);
+    setCreateOpen(true);
+  };
+
+  const handleCreate = async () => {
+    setActionLoading(true);
+    setFeedback(null);
+    try {
+      await adminCreatePixelBoard({
+        name: createName,
+        width: createWidth,
+        height: createHeight,
+        delay_seconds: createDelay,
+        allow_override: createAllowOverride,
+        status: createStatus,
+      });
+      await refresh();
+      setCreateOpen(false);
+      setFeedback('Board créé avec succès.');
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : 'Création échouée.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) return <p className="text-sm text-muted-foreground">Chargement...</p>;
   if (error || !data) return <p className="text-sm text-destructive">{error}</p>;
 
@@ -125,6 +166,12 @@ function AdminBoardsPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">PixelBoards</h2>
         <p className="text-muted-foreground">Gérez les boards de la plateforme.</p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button onClick={openCreate} disabled={actionLoading}>
+          Créer un board
+        </Button>
       </div>
 
       {feedback && (
@@ -279,6 +326,119 @@ function AdminBoardsPage() {
             </Button>
             <Button variant="destructive" onClick={() => void handleConfirmDelete()} disabled={actionLoading}>
               Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Créer un PixelBoard</DialogTitle>
+            <DialogDescription>
+              Créez un nouveau board (taille max 1000×1000).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-board-name">Nom</Label>
+              <Input
+                id="create-board-name"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                disabled={actionLoading}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="create-board-width">Largeur</Label>
+                <Input
+                  id="create-board-width"
+                  type="number"
+                  min={1}
+                  max={1000}
+                  value={Number.isFinite(createWidth) ? createWidth : 1}
+                  onChange={(e) => setCreateWidth(Number(e.target.value))}
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-board-height">Hauteur</Label>
+                <Input
+                  id="create-board-height"
+                  type="number"
+                  min={1}
+                  max={1000}
+                  value={Number.isFinite(createHeight) ? createHeight : 1}
+                  onChange={(e) => setCreateHeight(Number(e.target.value))}
+                  disabled={actionLoading}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-board-delay">Délai (secondes)</Label>
+              <Input
+                id="create-board-delay"
+                type="number"
+                min={0}
+                value={Number.isFinite(createDelay) ? createDelay : 0}
+                onChange={(e) => setCreateDelay(Number(e.target.value))}
+                disabled={actionLoading}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Allow override</p>
+                <p className="text-xs text-muted-foreground">
+                  Autoriser l'écrasement des pixels.
+                </p>
+              </div>
+              <Switch
+                checked={createAllowOverride}
+                onCheckedChange={setCreateAllowOverride}
+                disabled={actionLoading}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Statut</p>
+                <p className="text-xs text-muted-foreground">
+                  {createStatus === PixelBoardStatus.IN_PROGRESS ? 'En cours' : 'Terminé'}
+                </p>
+              </div>
+              <Switch
+                checked={createStatus === PixelBoardStatus.IN_PROGRESS}
+                onCheckedChange={(checked) =>
+                  setCreateStatus(
+                    checked ? PixelBoardStatus.IN_PROGRESS : PixelBoardStatus.FINISHED,
+                  )
+                }
+                disabled={actionLoading}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={actionLoading}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => void handleCreate()}
+              disabled={
+                actionLoading ||
+                createName.trim() === '' ||
+                !Number.isFinite(createWidth) ||
+                !Number.isFinite(createHeight) ||
+                createWidth <= 0 ||
+                createHeight <= 0
+              }
+            >
+              Créer
             </Button>
           </DialogFooter>
         </DialogContent>
