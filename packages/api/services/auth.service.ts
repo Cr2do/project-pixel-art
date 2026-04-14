@@ -1,10 +1,13 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/user';
-import { ConflictError, UnauthorizedError } from '../utils/errors';
-import { RegisterInput, LoginInput } from '../utils/schemas';
+import { ConflictError, UnauthorizedError, BadRequestError } from '../utils/errors';
+import { RegisterInput, LoginInput, ForgotPasswordInput, ResetPasswordInput } from '../utils/schemas';
+import { sendResetPasswordEmail } from './mail.service';
 
 const SALT_ROUNDS = 12;
+const RESET_TOKEN_TTL_MS = Number(process.env.RESET_TOKEN_TTL_MS ?? 1000 * 60 * 60);
 
 export interface AuthTokenPayload {
   userId: string;
@@ -56,4 +59,57 @@ export async function login(input: LoginInput): Promise<Record<string, unknown>>
   delete userObj.password;
 
   return { token, user: userObj };
+}
+
+function hashResetToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function getResetBaseUrl(): string {
+  return process.env.FRONTEND_APP_URL ?? 'http://localhost:5173';
+}
+
+export async function forgotPassword(input: ForgotPasswordInput): Promise<{ message: string; resetPath?: string }> {
+  const user = await User.findOne({ email: input.email }).select('+resetPasswordToken +resetPasswordExpiresAt');
+
+  if (!user) {
+    return { message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' };
+  }
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = hashResetToken(rawToken);
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+
+  user.resetPasswordToken = hashedToken;
+  user.resetPasswordExpiresAt = expiresAt;
+  await user.save();
+
+  const resetPath = `/reset-password/${rawToken}`;
+  const resetUrl = `${getResetBaseUrl()}${resetPath}`;
+  await sendResetPasswordEmail(user.email, resetUrl);
+
+  return {
+    message: 'Si cet email existe, un lien de réinitialisation a été envoyé.',
+    resetPath: process.env.NODE_ENV !== 'production' ? resetPath : undefined,
+  };
+}
+
+export async function resetPassword(input: ResetPasswordInput): Promise<{ message: string }> {
+  const hashedToken = hashResetToken(input.token);
+
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpiresAt: { $gt: new Date() },
+  }).select('+resetPasswordToken +resetPasswordExpiresAt');
+
+  if (!user) {
+    throw new BadRequestError('Lien de réinitialisation invalide ou expiré');
+  }
+
+  user.password = await hashPassword(input.password);
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpiresAt = undefined;
+  await user.save();
+
+  return { message: 'Mot de passe réinitialisé avec succès' };
 }

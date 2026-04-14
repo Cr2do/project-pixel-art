@@ -9,6 +9,8 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (payload: authService.LoginPayload) => Promise<IUser>;
   register: (payload: authService.RegisterPayload) => Promise<IUser>;
+  forgotPassword: (email: string) => Promise<authService.ForgotPasswordResponse>;
+  resetPassword: (payload: authService.ResetPasswordPayload) => Promise<{ message: string }>;
   logout: () => void;
 }
 
@@ -47,6 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(u);
         return u;
       },
+      forgotPassword: async (email) => authService.forgotPassword(email),
+      resetPassword: async (payload) => authService.resetPassword(payload),
       logout: () => {
         authService.logout();
         setUser(null);

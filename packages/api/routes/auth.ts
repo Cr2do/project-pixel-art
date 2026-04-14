@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth.middleware';
-import { RegisterSchema, LoginSchema } from '../utils/schemas';
+import { RegisterSchema, LoginSchema, ForgotPasswordSchema, ResetPasswordSchema } from '../utils/schemas';
 import { SchemaValidationError } from '../utils/errors';
 import * as authService from '../services/auth.service';
 
@@ -30,6 +30,36 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
   }
   try {
     const data = await authService.login(result.data);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', async (req: Request, res: Response, next: NextFunction) => {
+  const result = ForgotPasswordSchema.safeParse(req.body);
+  if (!result.success) {
+    next(new SchemaValidationError(result.error));
+    return;
+  }
+  try {
+    const data = await authService.forgotPassword(result.data);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req: Request, res: Response, next: NextFunction) => {
+  const result = ResetPasswordSchema.safeParse(req.body);
+  if (!result.success) {
+    next(new SchemaValidationError(result.error));
+    return;
+  }
+  try {
+    const data = await authService.resetPassword(result.data);
     res.json(data);
   } catch (err) {
     next(err);

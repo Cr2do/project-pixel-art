@@ -3,7 +3,10 @@ import {
   LayoutDashboard,
   User,
   Grid3X3,
+  Compass,
   LogOut,
+  Users,
+  SquareChartGantt,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -24,7 +27,6 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,14 +46,22 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
+  { label: 'Explorer', icon: Compass, to: '/explore' },
   { label: 'Mes PixelBoards', icon: Grid3X3, to: '/my-boards' },
   { label: 'Mon Profil', icon: User, to: '/profile' },
+];
+
+const ADMIN_NAV_ITEMS: NavItem[] = [
+  { label: 'Admin: Overview', icon: LayoutDashboard, to: '/admin' },
+  { label: 'Admin: Utilisateurs', icon: Users, to: '/admin/users' },
+  { label: 'Admin: Boards', icon: SquareChartGantt, to: '/admin/boards' },
+
 ];
 
 function UserLayout() {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const initials = user ? getUserInitials(user.firstname, user.lastname) : '';
 
   const handleLogout = () => {
@@ -107,6 +117,34 @@ function UserLayout() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {isAdmin && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {ADMIN_NAV_ITEMS.map((item) => (
+                    <SidebarMenuItem key={item.to}>
+                      <SidebarMenuButton asChild>
+                        <NavLink
+                          to={item.to}
+                          end={item.to === '/admin'}
+                          className={({ isActive }) =>
+                            isActive
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                              : ''
+                          }
+                        >
+                          <item.icon className="size-4" />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
           <SidebarGroup>
             <SidebarGroupLabel>Preferences</SidebarGroupLabel>
