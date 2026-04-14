@@ -62,12 +62,17 @@ function CreateBoardDialog({ onCreated }: { onCreated: (board: IPixelBoard) => v
       height: 50,
       delay_seconds: 0,
       allow_override: false,
+      endAt: '',
     },
   });
 
   const onSubmit = async (data: CreateBoardFormData) => {
     try {
-      const board = await boardService.create(data);
+	  const payload = {
+	    ...data,
+	    endAt: data.endAt ? new Date(data.endAt).toISOString() : undefined,
+	  };
+	  const board = await boardService.create(payload);
       toast.success('PixelBoard créé avec succès !');
       onCreated(board);
       reset();
@@ -114,6 +119,11 @@ function CreateBoardDialog({ onCreated }: { onCreated: (board: IPixelBoard) => v
             <Label htmlFor="delay_seconds">Délai entre pixels (secondes)</Label>
             <Input id="delay_seconds" type="number" placeholder="0" {...register('delay_seconds', { valueAsNumber: true })} />
             {errors.delay_seconds && <p className="text-sm text-destructive">{errors.delay_seconds.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="endAt">Date de fin (optionnel)</Label>
+            <Input id="endAt" type="datetime-local" {...register('endAt')} />
+            {errors.endAt && <p className="text-sm text-destructive">{errors.endAt.message}</p>}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
@@ -283,6 +293,12 @@ function UserBoardsPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Contributeurs</span>
                       <span className="font-medium">{board.contributions.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Date de fin</span>
+                      <span className="font-medium">
+                        {board.endAt ? new Date(board.endAt).toLocaleDateString('fr-FR') : 'Non définie'}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
