@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { PixelBoard, IPixelBoard } from '../models/pixelboard';
+import { Pixel } from '../models/pixel';
 import { NotFoundError } from '../utils/errors';
 import { CreatePixelBoardInput, UpdatePixelBoardInput } from '../utils/schemas';
 
@@ -69,4 +70,7 @@ export async function updatePixelBoard(id: string, input: UpdatePixelBoardInput)
 export async function deletePixelBoard(id: string): Promise<void> {
   const result = await PixelBoard.findByIdAndDelete(id);
   if (!result) throw new NotFoundError('PixelBoard introuvable');
+
+  // Nettoyage: supprimer les pixels associés pour éviter les documents orphelins.
+  await Pixel.deleteMany({ pixelBoardId: result._id });
 }

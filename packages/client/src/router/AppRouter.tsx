@@ -6,8 +6,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 import AdminOverviewPage from '../pages/admin/AdminOverviewPage';
 import AdminUsersPage from '../pages/admin/AdminUsersPage';
 import AdminBoardsPage from '../pages/admin/AdminBoardsPage';
-import AdminModerationPage from '../pages/admin/AdminModerationPage';
-import AdminSettingsPage from '../pages/admin/AdminSettingsPage';
+import AdminHeatmapPage from '../pages/admin/AdminHeatmapPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
@@ -20,6 +19,16 @@ import UserProfilePage from '../pages/user/UserProfilePage';
 import AdminLayout from '../components/layouts/AdminLayout';
 import UserLayout from '../components/layouts/UserLayout';
 import ProtectedRoute from './ProtectedRoute';
+
+function AdminBoardRedirect() {
+	// Read the dynamic :id from the current URL and redirect to the admin-scoped route.
+	// This keeps a single sidebar (AdminLayout) for admins.
+	const href = window.location.href;
+	const url = new URL(href);
+	const match = url.pathname.match(/\/boards\/([^/]+)$/);
+	const id = match?.[1];
+	return <Navigate to={id ? `/admin/boards/${id}` : '/admin/boards'} replace />;
+}
 
 function AppRouter() {
 	const { isAuthenticated, isAdmin } = useAuth();
@@ -65,8 +74,10 @@ function AppRouter() {
 						{ path: '/admin', element: <AdminOverviewPage /> },
 						{ path: '/admin/users', element: <AdminUsersPage /> },
 						{ path: '/admin/boards', element: <AdminBoardsPage /> },
-						{ path: '/admin/moderation', element: <AdminModerationPage /> },
-						{ path: '/admin/settings', element: <AdminSettingsPage /> },
+						{ path: '/admin/heatmap', element: <AdminHeatmapPage /> },
+						// Admin version of the same page, but rendered inside AdminLayout
+						{ path: '/admin/my-boards', element: <UserBoardsPage /> },
+						{ path: '/admin/boards/:id', element: <BoardDetailPage /> },
 					],
 				},
 			],

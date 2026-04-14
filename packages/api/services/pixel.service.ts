@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { PNG } from 'pngjs';
 import { Pixel, IPixel } from '../models/pixel';
+import { PixelEvent } from '../models/pixelEvent';
 import { PixelBoard } from '../models/pixelboard';
 import { NotFoundError, ForbiddenError, ConflictError, BadRequestError } from '../utils/errors';
 import { PlacePixelInput } from '../utils/schemas';
@@ -61,6 +62,16 @@ export async function placePixel(input: PlacePixelInput & { pixelBoardId: string
   }
 
   let pixel: IPixel;
+
+  // Always store an immutable placement event so we can build "most-used" heatmaps.
+  // This is independent from the board override policy.
+  await PixelEvent.create({
+    pixelBoardId: boardId,
+    userId,
+    position_x: input.position_x,
+    position_y: input.position_y,
+    color: input.color,
+  });
 
   if (board.allow_override) {
     const updated = await Pixel.findOneAndUpdate(

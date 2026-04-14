@@ -5,6 +5,8 @@ import {
   Grid3X3,
   Compass,
   LogOut,
+  Users,
+  SquareChartGantt,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -49,10 +51,17 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Mon Profil', icon: User, to: '/profile' },
 ];
 
+const ADMIN_NAV_ITEMS: NavItem[] = [
+  { label: 'Admin: Overview', icon: LayoutDashboard, to: '/admin' },
+  { label: 'Admin: Utilisateurs', icon: Users, to: '/admin/users' },
+  { label: 'Admin: Boards', icon: SquareChartGantt, to: '/admin/boards' },
+
+];
+
 function UserLayout() {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const initials = user ? getUserInitials(user.firstname, user.lastname) : '';
 
   const handleLogout = () => {
@@ -108,6 +117,34 @@ function UserLayout() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {isAdmin && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {ADMIN_NAV_ITEMS.map((item) => (
+                    <SidebarMenuItem key={item.to}>
+                      <SidebarMenuButton asChild>
+                        <NavLink
+                          to={item.to}
+                          end={item.to === '/admin'}
+                          className={({ isActive }) =>
+                            isActive
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                              : ''
+                          }
+                        >
+                          <item.icon className="size-4" />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
           <SidebarGroup>
             <SidebarGroupLabel>Preferences</SidebarGroupLabel>
