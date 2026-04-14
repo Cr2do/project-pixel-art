@@ -120,8 +120,6 @@ export async function adminDeletePixelBoard(boardId: string): Promise<void> {
 }
 
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {
-  // Les pages admin existantes attendent une structure "dashboard".
-  // On la reconstruit côté client avec les endpoints disponibles.
   const [usersRes, boardsRes, statsRes] = await Promise.all([
     api.get<IUser[]>('/admin/users'),
     api.get<IPixelBoard[]>('/admin/pixelboards'),
