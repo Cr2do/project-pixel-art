@@ -40,13 +40,15 @@ spec:
             httpGet:
               path: /
               port: {{ .Values.api.port }}
-            initialDelaySeconds: 15
+            initialDelaySeconds: 60
             periodSeconds: 20
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /
               port: {{ .Values.api.port }}
-            initialDelaySeconds: 5
+            initialDelaySeconds: 60
             periodSeconds: 10
+            failureThreshold: 5
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}
