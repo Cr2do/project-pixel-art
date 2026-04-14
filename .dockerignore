@@ -1,0 +1,11 @@
+node_modules
+packages/*/node_modules
+packages/*/dist
+.git
+.github
+docker
+deployment
+*.md
+.env
+.env.*
+package-lock.json
