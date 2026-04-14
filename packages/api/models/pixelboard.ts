@@ -9,6 +9,7 @@ export interface IPixelBoard extends Document {
     status: 'IN_PROGRESS' | 'FINISHED';
     allow_override: boolean;
     delay_seconds: number;
+    endAt?: Date;
     createdAt: Date;
     updatedAt: Date;
     contributions: {
@@ -72,6 +73,10 @@ const pixelBoardSchema = new Schema<IPixelBoard>({
     delay_seconds: {
         type: Number,
         default: 60,
+    },
+    endAt: {
+        type: Date,
+        required: false,
     },
     contributions: [contributionSchema],
 }, {

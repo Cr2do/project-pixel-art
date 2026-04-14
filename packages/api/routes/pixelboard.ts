@@ -1,11 +1,19 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import multer from 'multer';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth.middleware';
-import { CreatePixelBoardSchema, PlacePixelSchema } from '../utils/schemas';
+import {
+  CreatePixelBoardSchema,
+  PlacePixelSchema,
+  ReplayQuerySchema,
+  UploadImageContributionSchema,
+} from '../utils/schemas';
 import { SchemaValidationError } from '../utils/errors';
 import * as boardService from '../services/pixelboard.service';
 import * as pixelService from '../services/pixel.service';
+import * as exportService from '../services/export.service';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 
 // GET /api/pixelboards — public
 router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
@@ -47,6 +55,49 @@ router.get('/:id', async (req: Request<{ id: string }>, res: Response, next: Nex
   }
 });
 
+// GET /api/pixelboards/:id/replay — public
+router.get('/:id/replay', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  const parsedQuery = ReplayQuerySchema.safeParse(req.query);
+  if (!parsedQuery.success) {
+    next(new SchemaValidationError(parsedQuery.error));
+    return;
+  }
+  try {
+    const replay = await pixelService.getReplayByBoard(
+      req.params.id,
+      parsedQuery.data.limit,
+      parsedQuery.data.offset,
+    );
+    res.json(replay);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/pixelboards/:id/export.svg — public
+router.get('/:id/export.svg', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const svg = await exportService.buildBoardSvg(req.params.id);
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="pixelboard-${req.params.id}.svg"`);
+    res.send(svg);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/pixelboards/:id/export.png — public
+router.get('/:id/export.png', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const png = await exportService.buildBoardPng(req.params.id);
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Disposition', `attachment; filename="pixelboard-${req.params.id}.png"`);
+    res.send(png);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/pixelboards/:id/pixels — authentifié
 router.get('/:id/pixels', authenticate, async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
   try {
@@ -76,5 +127,39 @@ router.post('/:id/pixels', authenticate, async (req: Request<{ id: string }>, re
     next(err);
   }
 });
+
+// POST /api/pixelboards/:id/upload-image — authentifié
+router.post(
+  '/:id/upload-image',
+  authenticate,
+  upload.single('image'),
+  async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+    const parsedBody = UploadImageContributionSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      next(new SchemaValidationError(parsedBody.error));
+      return;
+    }
+
+    if (!req.file?.buffer) {
+      res.status(400).json({ message: 'Fichier image requis (champ image)' });
+      return;
+    }
+
+    try {
+      const { user } = req as unknown as AuthenticatedRequest;
+      const summary = await pixelService.uploadImageContribution({
+        pixelBoardId: req.params.id,
+        userId: user._id.toString(),
+        imageBuffer: req.file.buffer,
+        offset_x: parsedBody.data.offset_x,
+        offset_y: parsedBody.data.offset_y,
+        maxPixels: parsedBody.data.maxPixels,
+      });
+      res.status(201).json(summary);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 export { router as pixelboardRouter };
