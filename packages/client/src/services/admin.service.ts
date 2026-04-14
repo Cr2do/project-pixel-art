@@ -135,7 +135,28 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
 }
 
 export async function toggleUserRole(_userId: string): Promise<AdminDashboardData> {
-  throw new Error('Not implemented: toggleUserRole endpoint missing');
+  try {
+    await api.patch(`/admin/users/${_userId}/role`);
+    return getAdminDashboardData();
+  } catch (err: unknown) {
+    // Axios renvoie souvent un message générique ("Request failed with status code 400").
+    // On remonte le message API si présent.
+    if (typeof err === 'object' && err && 'isAxiosError' in err) {
+      const axiosErr = err as {
+        response?: { data?: unknown };
+      };
+
+      const data = axiosErr.response?.data;
+      if (data && typeof data === 'object' && 'message' in data) {
+        const message = (data as { message?: unknown }).message;
+        if (typeof message === 'string' && message.trim() !== '') {
+          throw new Error(message);
+        }
+      }
+    }
+
+    throw err;
+  }
 }
 
 export async function increaseBoardDelay(

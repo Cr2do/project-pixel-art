@@ -31,6 +31,33 @@ router.delete('/users/:id', async (req: Request<{ id: string }>, res: Response, 
   }
 });
 
+// PATCH /api/admin/users/:id/role
+router.patch('/users/:id/role', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      res.status(404).json({ message: 'Utilisateur introuvable' });
+      return;
+    }
+
+    // Empêche de retirer le dernier admin
+    if (user.role === 'ADMIN') {
+      const adminCount = await User.countDocuments({ role: 'ADMIN' });
+      if (adminCount <= 1) {
+        res.status(400).json({ message: 'Au moins un administrateur est requis.' });
+        return;
+      }
+    }
+
+    user.role = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
+    await user.save();
+
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/admin/pixelboards
 router.get('/pixelboards', async (_req: Request, res: Response, next: NextFunction) => {
   try {
