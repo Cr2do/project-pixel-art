@@ -204,6 +204,7 @@ export async function toggleOverridePolicy(): Promise<AdminDashboardData> {
   await Promise.all(
     boards
       .filter((b) => b.status === PixelBoardStatus.IN_PROGRESS)
+      // Important: ne modifier QUE allow_override (ne jamais envoyer delay_seconds ici).
       .map((b) => adminUpdatePixelBoard(b.id, { allow_override: !hasEnabled })),
   );
 

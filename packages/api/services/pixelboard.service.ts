@@ -54,7 +54,16 @@ export async function findById(id: string): Promise<IPixelBoard | null> {
 }
 
 export async function updatePixelBoard(id: string, input: UpdatePixelBoardInput): Promise<IPixelBoard> {
-  const board = await PixelBoard.findByIdAndUpdate(id, input, { new: true, runValidators: true });
+  // Ne pas écraser des champs avec `undefined` lors des updates partielles.
+  const setPayload = Object.fromEntries(
+    Object.entries(input).filter(([, v]) => v !== undefined),
+  );
+
+  const board = await PixelBoard.findByIdAndUpdate(
+    id,
+    { $set: setPayload },
+    { new: true, runValidators: true },
+  );
   if (!board) throw new NotFoundError('PixelBoard introuvable');
   return board;
 }
@@ -64,5 +73,5 @@ export async function deletePixelBoard(id: string): Promise<void> {
   if (!result) throw new NotFoundError('PixelBoard introuvable');
 
   // Nettoyage: supprimer les pixels associés pour éviter les documents orphelins.
-  await Pixel.deleteMany({ pixelboard_id: result._id });
+  await Pixel.deleteMany({ pixelBoardId: result._id });
 }
