@@ -6,7 +6,6 @@ import {
   LogOut,
   Users,
   SquareChartGantt,
-  Settings,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -27,7 +26,6 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +53,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: 'Admin: Overview', icon: LayoutDashboard, to: '/admin' },
   { label: 'Admin: Utilisateurs', icon: Users, to: '/admin/users' },
   { label: 'Admin: Boards', icon: SquareChartGantt, to: '/admin/boards' },
-  { label: 'Admin: Paramètres', icon: Settings, to: '/admin/settings' },
+
 ];
 
 function UserLayout() {

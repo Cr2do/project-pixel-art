@@ -19,7 +19,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useNavigate } from 'react-router-dom';
 import {
   adminDeletePixelBoard,
   adminCreatePixelBoard,
@@ -31,7 +30,6 @@ import {
 } from '@/services/admin.service';
 
 function AdminBoardsPage() {
-  const navigate = useNavigate();
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +85,7 @@ function AdminBoardsPage() {
     setSelectedBoard(board);
     setDeleteOpen(true);
   };
+
 
   const handleSaveEdit = async () => {
     if (!selectedBoard) return;
@@ -211,14 +210,6 @@ function AdminBoardsPage() {
                     {board.contributorCount} contributeur(s)
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={actionLoading}
-                      onClick={() => navigate(`/boards/${board.id}`)}
-                    >
-                      Jouer
-                    </Button>
                     <Button
                       size="sm"
                       variant="outline"

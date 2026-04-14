@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock3, SquareChartGantt, Users } from 'lucide-react';
+import { SquareChartGantt, Users } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   getAdminDashboardData,
-  AdminActivityLevel,
   UserRole,
   type AdminDashboardData,
 } from '@/services/admin.service';
@@ -96,36 +95,6 @@ function AdminOverviewPage() {
                     <Badge variant={user.role === UserRole.ADMIN ? 'default' : 'secondary'}>
                       {user.role}
                     </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Activité récente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data.activities.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune activité.</p>
-            ) : (
-              <div className="space-y-2">
-                {data.activities.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className={`rounded-lg border p-3 text-sm ${
-                      activity.level === AdminActivityLevel.WARNING
-                        ? 'border-orange-200 bg-orange-50 text-orange-900 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-100'
-                        : 'border-border bg-muted/50'
-                    }`}
-                  >
-                    <p className="font-medium">{activity.message}</p>
-                    <p className="mt-1 flex items-center gap-1 text-xs opacity-70">
-                      <Clock3 className="size-3" />
-                      {formatDateTimeFR(activity.createdAt)}
-                    </p>
                   </div>
                 ))}
               </div>

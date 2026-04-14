@@ -6,7 +6,7 @@ import api from './api';
 import { errorHandler } from './middleware/error.middleware';
 
 const app = express();
-const port = 8000;
+const port = Number(process.env.PORT ?? 8000);
 
 app.use(cors());
 app.use(express.json());

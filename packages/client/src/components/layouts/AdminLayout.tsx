@@ -3,7 +3,7 @@ import {
   LayoutDashboard,
   Users,
   SquareChartGantt,
-  Settings,
+  Gamepad2,
   LogOut,
   Grid3X3,
   Sun,
@@ -47,7 +47,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', icon: LayoutDashboard, to: '/admin' },
   { label: 'Utilisateurs', icon: Users, to: '/admin/users' },
   { label: 'Boards', icon: SquareChartGantt, to: '/admin/boards' },
-  { label: 'Paramètres', icon: Settings, to: '/admin/settings' },
+  { label: 'Heatmap', icon: Gamepad2, to: '/admin/heatmap' },
+  { label: 'Mes PixelBoards', icon: Grid3X3, to: '/admin/my-boards' },
 ];
 
 function AdminLayout() {

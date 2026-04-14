@@ -48,6 +48,22 @@ export interface AdminActivity {
   level: AdminActivityLevel;
 }
 
+export interface AdminHeatmapPoint {
+  x: number;
+  y: number;
+  count: number;
+}
+
+export interface AdminBoardHeatmap {
+  board: {
+    id: string;
+    width: number;
+    height: number;
+  };
+  points: AdminHeatmapPoint[];
+  maxCount: number;
+}
+
 export interface AdminDashboardData {
   kpis: {
     totalUsers: number;
@@ -118,6 +134,17 @@ export async function adminUpdatePixelBoard(
 export async function adminDeletePixelBoard(boardId: string): Promise<void> {
   await api.delete(`/admin/pixelboards/${boardId}`);
 }
+
+export async function adminGetPixelBoardHeatmap(
+  boardId: string,
+  params?: { from?: string; to?: string },
+): Promise<AdminBoardHeatmap> {
+  const { data } = await api.get<AdminBoardHeatmap>(`/admin/pixelboards/${boardId}/heatmap`, {
+    params,
+  });
+  return data;
+}
+
 
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {
   const [usersRes, boardsRes, statsRes] = await Promise.all([
