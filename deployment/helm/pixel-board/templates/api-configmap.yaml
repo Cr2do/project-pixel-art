@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "pixel-board.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.api.port | quote }}
+  JWT_EXPIRES_IN: {{ .Values.api.jwtExpiresIn | quote }}
+  CANVAS_MAX_WIDTH: {{ .Values.api.canvasMaxWidth | quote }}

@@ -1,0 +1,54 @@
+namespace: pixel-board
+
+# ── Images ───────────────────────────────────────────────
+image:
+  registry: europe-west1-docker.pkg.dev
+  project: YOUR_PROJECT_ID
+  repository: reactive-pixel-board-registry
+  tag: latest
+  pullPolicy: Always
+
+# ── MongoDB ──────────────────────────────────────────────
+mongodb:
+  image: mongo:8.0
+  rootUsername: admin
+  rootPassword: changeme
+  database: pixelboard
+  storage: 5Gi
+  storageClass: standard-rwo
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# ── API (Express) ────────────────────────────────────────
+api:
+  replicas: 2
+  port: 8000
+  staticIp: ""
+  jwtSecret: changeme_jwt_secret
+  jwtExpiresIn: "7d"
+  canvasMaxWidth: "5000"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+# ── Client (React/nginx) ─────────────────────────────────
+client:
+  replicas: 2
+  staticIp: ""
+  apiUrl: "http://localhost:8000"
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
