@@ -102,23 +102,17 @@ resource "google_compute_instance" "server" {
         systemctl enable docker
         systemctl start docker
 
-        # Configure Docker pour Artifact Registry (system-wide via daemon)
-        cat > /etc/docker/daemon.json << 'EOF'
-        {
-          "credHelpers": {
-            "europe-west1-docker.pkg.dev": "gcloud"
-          }
-        }
-        EOF
-        systemctl restart docker
-
         # Créer l'utilisateur deploy
         useradd -m -s /bin/bash deploy
         usermod -aG docker deploy
 
+        # Configure l'auth Artifact Registry pour deploy
+        su -s /bin/bash deploy -c \
+          "gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet"
+
         # Répertoire de l'application
-        mkdir -p /app
-        chown deploy:deploy /app
+        mkdir -p /home/deploy/docker
+        chown -R deploy:deploy /home/deploy/docker
     EOT
 
     service_account {

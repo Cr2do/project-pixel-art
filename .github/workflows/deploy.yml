@@ -49,6 +49,6 @@ jobs:
           key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
           script: |
             cd /home/deploy/docker
-            docker compose -f docker-compose.prod.yml --env-file .env.prod pull
-            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
-            docker compose -f docker-compose.prod.yml --env-file .env.prod ps
+            sudo docker compose -f docker-compose.prod.yml --env-file .env.prod pull
+            sudo docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+            sudo docker compose -f docker-compose.prod.yml --env-file .env.prod ps
