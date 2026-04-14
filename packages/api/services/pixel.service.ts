@@ -73,8 +73,18 @@ export async function placePixel(input: PlacePixelInput & { pixelBoardId: string
   return pixel;
 }
 
-export async function findByBoard(pixelBoardId: string): Promise<IPixel[]> {
-  return Pixel.find({ pixelBoardId: new Types.ObjectId(pixelBoardId) });
+export async function findByBoard(pixelBoardId: string): Promise<(Omit<IPixel, 'userId'> & { username: string })[]> {
+  const pixels = await Pixel.find({ pixelBoardId: new Types.ObjectId(pixelBoardId) })
+    .populate<{ userId: { firstname: string; lastname: string } | null }>('userId', 'firstname lastname');
+
+  return pixels.map((p) => {
+    const json = p.toJSON() as Record<string, unknown>;
+    const user = p.userId as { firstname: string; lastname: string } | null;
+    return {
+      ...json,
+      username: user ? `${user.firstname} ${user.lastname}` : 'Inconnu',
+    } as Omit<IPixel, 'userId'> & { username: string };
+  });
 }
 
 export async function findByUser(userId: string): Promise<IPixel[]> {

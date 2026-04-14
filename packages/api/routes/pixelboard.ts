@@ -4,6 +4,7 @@ import { CreatePixelBoardSchema, PlacePixelSchema } from '../utils/schemas';
 import { SchemaValidationError } from '../utils/errors';
 import * as boardService from '../services/pixelboard.service';
 import * as pixelService from '../services/pixel.service';
+import { getIO } from '../socket/io';
 
 const router = Router();
 
@@ -71,6 +72,15 @@ router.post('/:id/pixels', authenticate, async (req: Request<{ id: string }>, re
       pixelBoardId: req.params.id,
       userId: user._id.toString(),
     });
+
+    getIO().to(`board:${req.params.id}`).emit('pixel:placed', {
+      position_x: pixel.position_x,
+      position_y: pixel.position_y,
+      color: pixel.color,
+      userId: user._id.toString(),
+      username: `${user.firstname} ${user.lastname}`,
+    });
+
     res.status(201).json(pixel);
   } catch (err) {
     next(err);
