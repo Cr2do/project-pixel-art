@@ -90,7 +90,7 @@ resource "google_compute_instance" "server" {
 
         # Install Docker
         apt-get update -y
-        apt-get install -y ca-certificates curl
+        apt-get install -y ca-certificates curl gnupg
         install -m 0755 -d /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
         chmod a+r /etc/apt/keyrings/docker.asc
@@ -102,11 +102,19 @@ resource "google_compute_instance" "server" {
         systemctl enable docker
         systemctl start docker
 
+        # Install Google Cloud SDK
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | \
+            tee /etc/apt/sources.list.d/google-cloud-sdk.list > /dev/null
+        apt-get update -y
+        apt-get install -y google-cloud-cli
+
         # Créer l'utilisateur deploy
         useradd -m -s /bin/bash deploy
         usermod -aG docker deploy
 
-        # Configure l'auth Artifact Registry pour deploy
+        # Configure Docker auth pour Artifact Registry (utilise le service account de la VM)
+        gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
         su -s /bin/bash deploy -c \
           "gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet"
 
