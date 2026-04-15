@@ -48,11 +48,24 @@ export async function createPixelBoard(input: CreatePixelBoardInput & { authorUs
   });
 }
 
+/**
+ * Mark as FINISHED any board whose endAt is in the past and status is still IN_PROGRESS.
+ * Called lazily before reads so boards expire on the next fetch without a dedicated scheduler.
+ */
+export async function expireBoards(): Promise<void> {
+  await PixelBoard.updateMany(
+    { status: 'IN_PROGRESS', endAt: { $lte: new Date() } },
+    { $set: { status: 'FINISHED' } },
+  );
+}
+
 export async function findAll(): Promise<IPixelBoard[]> {
+  await expireBoards();
   return PixelBoard.find();
 }
 
 export async function findById(id: string): Promise<IPixelBoard | null> {
+  await expireBoards();
   return PixelBoard.findById(id);
 }
 

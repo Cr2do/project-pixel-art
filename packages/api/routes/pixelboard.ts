@@ -125,6 +125,7 @@ router.post('/:id/pixels', authenticate, async (req: Request<{ id: string }>, re
     });
 
     getIO().to(`board:${req.params.id}`).emit('pixel:placed', {
+      boardId: req.params.id,
       position_x: pixel.position_x,
       position_y: pixel.position_y,
       color: pixel.color,
