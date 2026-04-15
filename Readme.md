@@ -13,6 +13,10 @@ Toile collaborative de pixel art en temps réel.
 
 http://34.79.5.40
 
+- **ADMIN** :
+  - **email**: admin@pixelboard.com
+  - **password** : Admin1234!
+    
 ## Architecture
 
 ```
