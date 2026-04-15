@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Grid3X3, Search, ChevronLeft, ChevronRight, Users, Paintbrush, CalendarDays, Map } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,6 +18,7 @@ import * as boardService from '@/services/pixelboard.service';
 import * as pixelService from '@/services/pixel.service';
 import { getApiError } from '@/services/api.utils';
 import { useGlobalMapSocket } from '@/hooks/use-global-map-socket';
+import type { PixelPlacedEvent } from '@/hooks/use-board-socket';
 import { PixelBoardStatus, type IPixelBoard, type IPixel } from '@/types';
 import { STATUS_LABEL } from '@/utils/pixelboard.utils';
 import { GlobalMapCanvas } from '@/components/map/GlobalMapCanvas';
@@ -75,7 +76,7 @@ function MapTab({ boards, loading }: { boards: IPixelBoard[]; loading: boolean }
 
   const boardIds = useMemo(() => boards.map((b) => b.id), [boards]);
 
-  useGlobalMapSocket(boardIds, (event) => {
+  const handlePixelPlaced = useCallback((event: PixelPlacedEvent) => {
     setPixelsByBoard((prev) => {
       const existing = prev[event.boardId] ?? [];
       const idx = existing.findIndex(
@@ -99,7 +100,9 @@ function MapTab({ boards, loading }: { boards: IPixelBoard[]; loading: boolean }
       }
       return { ...prev, [event.boardId]: updated };
     });
-  });
+  }, []);
+
+  useGlobalMapSocket(boardIds, handlePixelPlaced);
 
   if (loading) return <Skeleton className="w-full h-[500px] rounded-lg" />;
 

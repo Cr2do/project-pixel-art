@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, NavLink } from 'react-router-dom';
 import { ArrowLeft, Clock, Grid3X3, Users, Layers } from 'lucide-react';
 import { toast } from 'sonner';
@@ -38,9 +38,11 @@ function BoardDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [externalPixel, setExternalPixel] = useState<ExternalPixel | null>(null);
 
-  useBoardSocket(id ?? '', (event: PixelPlacedEvent) => {
+  const handlePixelPlaced = useCallback((event: PixelPlacedEvent) => {
     setExternalPixel({ x: event.position_x, y: event.position_y, color: event.color, username: event.username });
-  });
+  }, []);
+
+  useBoardSocket(id ?? '', handlePixelPlaced);
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [offsetX, setOffsetX] = useState(0);

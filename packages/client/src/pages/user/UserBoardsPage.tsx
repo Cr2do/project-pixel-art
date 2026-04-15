@@ -55,7 +55,7 @@ function BoardCardSkeleton() {
 function CreateBoardDialog({ onCreated }: { onCreated: (board: IPixelBoard) => void }) {
   const [open, setOpen] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { isSubmitting, errors } } = useForm<CreateBoardFormData>({
+  const { register, handleSubmit, reset, watch, setValue, formState: { isSubmitting, errors } } = useForm<CreateBoardFormData>({
     resolver: zodResolver(createBoardSchema),
     defaultValues: {
       name: '',
@@ -66,6 +66,8 @@ function CreateBoardDialog({ onCreated }: { onCreated: (board: IPixelBoard) => v
       endAt: '',
     },
   });
+
+  const allowOverride = watch('allow_override');
 
   const onSubmit = async (data: CreateBoardFormData) => {
     try {
@@ -131,7 +133,7 @@ function CreateBoardDialog({ onCreated }: { onCreated: (board: IPixelBoard) => v
               <p className="text-sm font-medium">Superposition de pixels</p>
               <p className="text-xs text-muted-foreground">Les utilisateurs peuvent réécrire les pixels existants</p>
             </div>
-            <Switch {...register('allow_override')} />
+            <Switch checked={allowOverride} onCheckedChange={(checked) => setValue('allow_override', checked)} />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
