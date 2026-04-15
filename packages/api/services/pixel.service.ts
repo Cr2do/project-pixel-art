@@ -195,18 +195,23 @@ export async function uploadImageContribution(input: {
   }
 
   const candidates: Array<{ position_x: number; position_y: number; color: string }> = [];
+  let done = false;
 
-  for (let y = 0; y < parsed.height; y++) {
-    for (let x = 0; x < parsed.width; x++) {
-      if (candidates.length >= input.maxPixels) break;
+  for (let y = 0; y < parsed.height && !done; y++) {
+    for (let x = 0; x < parsed.width && !done; x++) {
+      if (candidates.length >= input.maxPixels) {
+        done = true;
+        break;
+      }
 
       const idx = (parsed.width * y + x) << 2;
-      const r = parsed.data[idx];
-      const g = parsed.data[idx + 1];
-      const b = parsed.data[idx + 2];
-      const a = parsed.data[idx + 3];
+      const r = parsed.data[idx] ?? 0;
+      const g = parsed.data[idx + 1] ?? 0;
+      const b = parsed.data[idx + 2] ?? 0;
+      const a = parsed.data[idx + 3] ?? 255;
 
-      if (a === 0) continue;
+      // Ignore fully transparent pixels, but blend semi-transparent ones
+      if (a < 25) continue;
 
       const boardX = input.offset_x + x;
       const boardY = input.offset_y + y;
@@ -216,7 +221,6 @@ export async function uploadImageContribution(input: {
       const color = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
       candidates.push({ position_x: boardX, position_y: boardY, color });
     }
-    if (candidates.length >= input.maxPixels) break;
   }
 
   if (candidates.length === 0) {
