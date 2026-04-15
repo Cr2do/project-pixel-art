@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Clock,
@@ -29,10 +29,13 @@ import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
 import * as boardService from '@/services/pixelboard.service';
 import * as pixelService from '@/services/pixel.service';
+import * as statsService from '@/services/stats.service';
 import { getApiError } from '@/services/api.utils';
 import { GlobalMapCanvas } from '@/components/map/GlobalMapCanvas';
 import { useGlobalMapSocket } from '@/hooks/use-global-map-socket';
+import type { PixelPlacedEvent } from '@/hooks/use-board-socket';
 import type { IPixelBoard, IPixel } from '@/types';
+import type { StatsResponse } from '@/services/stats.service';
 
 const FEATURES = [
   {
@@ -59,13 +62,6 @@ const FEATURES = [
     description:
       'Certains boards permettent d\'écraser les pixels existants, d\'autres non — deux façons de créer, deux ambiances différentes.',
   },
-];
-
-const STATS = [
-  { label: 'Boards actifs', value: '12', icon: Grid3X3 },
-  { label: 'Pixels placés', value: '84 000+', icon: Paintbrush },
-  { label: 'Artistes', value: '320+', icon: Users },
-  { label: 'Œuvres terminées', value: '8', icon: Trophy },
 ];
 
 function HomeNavbar() {
@@ -233,11 +229,29 @@ function PixelPreview() {
 }
 
 function StatsBar() {
+  const [stats, setStats] = useState<StatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    statsService
+      .getStats()
+      .then(setStats)
+      .catch((err) => console.error('Failed to load stats:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const statsData = [
+    { label: 'Boards actifs', value: loading ? '-' : stats?.activeBoards, icon: Grid3X3 },
+    { label: 'Pixels placés', value: loading ? '-' : stats?.totalPixels.toLocaleString(), icon: Paintbrush },
+    { label: 'Artistes', value: loading ? '-' : stats?.totalContributors, icon: Users },
+    { label: 'Œuvres terminées', value: loading ? '-' : stats?.finishedBoards, icon: Trophy },
+  ];
+
   return (
     <section className="border-y bg-muted/30 py-10">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-          {STATS.map(({ label, value, icon: Icon }) => (
+          {statsData.map(({ label, value, icon: Icon }) => (
             <div key={label} className="flex flex-col items-center gap-2 text-center">
               <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
                 <Icon className="size-5 text-primary" />
@@ -311,7 +325,7 @@ function ActiveBoardsSection() {
 
   const boardIds = useMemo(() => boards.map((b) => b.id), [boards]);
 
-  useGlobalMapSocket(boardIds, (event) => {
+  const handlePixelPlaced = useCallback((event: PixelPlacedEvent) => {
     setPixelsByBoard((prev) => {
       const existing = prev[event.boardId] ?? [];
       const idx = existing.findIndex(
@@ -335,7 +349,9 @@ function ActiveBoardsSection() {
       }
       return { ...prev, [event.boardId]: updated };
     });
-  });
+  }, []);
+
+  useGlobalMapSocket(boardIds, handlePixelPlaced);
 
   return (
     <section id="boards" className="py-20 bg-muted/20">

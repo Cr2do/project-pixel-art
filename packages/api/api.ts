@@ -3,6 +3,7 @@ import { authRouter } from './routes/auth';
 import { userRouter } from './routes/user';
 import { pixelboardRouter } from './routes/pixelboard';
 import { adminRouter } from './routes/admin';
+import { statsRouter } from './routes/stats';
 
 const api = Router();
 
@@ -14,5 +15,6 @@ api.use('/auth', authRouter);
 api.use('/users', userRouter);
 api.use('/pixelboards', pixelboardRouter);
 api.use('/admin', adminRouter);
+api.use('/stats', statsRouter);
 
 export default api;
