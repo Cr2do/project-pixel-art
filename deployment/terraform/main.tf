@@ -61,7 +61,7 @@ resource "google_compute_firewall" "allow_ssh" {
 # ── VM ───────────────────────────────────────────────────
 resource "google_compute_instance" "server" {
     name         = "pixel-board-server"
-    machine_type = "e2-small"
+    machine_type = "e2-standard-4"
     zone         = var.zone
 
     tags = ["pixel-board"]

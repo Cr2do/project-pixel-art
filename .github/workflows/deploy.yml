@@ -27,6 +27,7 @@ jobs:
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           JWT_EXPIRES_IN=7d
           CANVAS_MAX_WIDTH=5000
+          CLIENT_URL=http://${{ vars.SERVER_IP }}
           VITE_API_URL=http://${{ vars.SERVER_IP }}:8000/api
           IMAGE_TAG=${{ github.event.inputs.image_tag }}
           GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}

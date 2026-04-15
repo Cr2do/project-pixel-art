@@ -12,7 +12,10 @@ import { expireBoards } from './services/pixelboard.service';
 const app = express();
 const port = Number(process.env.PORT ?? 8000);
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL,
+  credentials: true,
+}));
 app.use(express.json());
 
 app.get('/', (_req, res) => {
