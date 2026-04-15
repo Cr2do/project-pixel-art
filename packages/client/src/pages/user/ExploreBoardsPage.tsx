@@ -15,10 +15,10 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import * as boardService from '@/services/pixelboard.service';
-import * as mapService from '@/services/map.service';
-import type { GlobalMapResponse } from '@/services/map.service';
+import * as pixelService from '@/services/pixel.service';
 import { getApiError } from '@/services/api.utils';
-import { PixelBoardStatus, type IPixelBoard } from '@/types';
+import { useGlobalMapSocket } from '@/hooks/use-global-map-socket';
+import { PixelBoardStatus, type IPixelBoard, type IPixel } from '@/types';
 import { STATUS_LABEL } from '@/utils/pixelboard.utils';
 import { GlobalMapCanvas } from '@/components/map/GlobalMapCanvas';
 
@@ -60,21 +60,50 @@ function BoardCardSkeleton() {
   );
 }
 
-function MapTab() {
-  const [mapData, setMapData] = useState<GlobalMapResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+function MapTab({ boards, loading }: { boards: IPixelBoard[]; loading: boolean }) {
+  const [pixelsByBoard, setPixelsByBoard] = useState<Record<string, IPixel[]>>({});
 
   useEffect(() => {
-    mapService
-      .getGlobalMap()
-      .then(setMapData)
-      .catch((err) => toast.error(getApiError(err)))
-      .finally(() => setLoading(false));
-  }, []);
+    if (boards.length === 0) return;
+    boards.forEach((board) => {
+      pixelService
+        .getByBoard(board.id)
+        .then((pixels) => setPixelsByBoard((prev) => ({ ...prev, [board.id]: pixels })))
+        .catch(() => {});
+    });
+  }, [boards]);
+
+  const boardIds = useMemo(() => boards.map((b) => b.id), [boards]);
+
+  useGlobalMapSocket(boardIds, (event) => {
+    setPixelsByBoard((prev) => {
+      const existing = prev[event.boardId] ?? [];
+      const idx = existing.findIndex(
+        (p) => p.position_x === event.position_x && p.position_y === event.position_y,
+      );
+      const updated = [...existing];
+      if (idx >= 0) {
+        updated[idx] = { ...updated[idx], color: event.color };
+      } else {
+        updated.push({
+          id: `${event.boardId}-${event.position_x}-${event.position_y}`,
+          pixelBoardId: event.boardId,
+          userId: event.userId,
+          username: event.username,
+          position_x: event.position_x,
+          position_y: event.position_y,
+          color: event.color,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      return { ...prev, [event.boardId]: updated };
+    });
+  });
 
   if (loading) return <Skeleton className="w-full h-[500px] rounded-lg" />;
 
-  if (!mapData || mapData.boards.length === 0) {
+  if (boards.length === 0) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -85,7 +114,7 @@ function MapTab() {
     );
   }
 
-  return <GlobalMapCanvas data={mapData} />;
+  return <GlobalMapCanvas boards={boards} pixelsByBoard={pixelsByBoard} />;
 }
 
 function ExploreBoardsPage() {
@@ -295,7 +324,7 @@ function ExploreBoardsPage() {
 
         {/* Carte globale — chargée uniquement à l'ouverture de l'onglet */}
         <TabsContent value="map" className="mt-4">
-          <MapTab />
+          <MapTab boards={boards} loading={loading} />
         </TabsContent>
       </Tabs>
     </div>

@@ -69,7 +69,6 @@ function AdminOverviewPage() {
           </CardContent>
         </Card>
 
-        {/* Modération supprimée */}
       </div>
 
       <Separator />

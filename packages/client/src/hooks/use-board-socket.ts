@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import type { IHoveredCell } from '@/types';
 
 export interface PixelPlacedEvent {
+  boardId: string;
   position_x: number;
   position_y: number;
   color: string;
@@ -18,7 +19,7 @@ export interface PixelTooltipInfo {
 
 let socket: Socket | null = null;
 
-function getSocket(): Socket {
+export function getSocket(): Socket {
   if (!socket) {
     socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') ?? 'http://localhost:8000', {
       transports: ['websocket'],

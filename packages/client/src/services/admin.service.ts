@@ -4,18 +4,6 @@ import { UserRole, PixelBoardStatus } from '@/types';
 
 export { UserRole, PixelBoardStatus };
 
-export enum AdminActivityType {
-  USER_CREATED = 'USER_CREATED',
-  ROLE_UPDATED = 'ROLE_UPDATED',
-  BOARD_UPDATED = 'BOARD_UPDATED',
-  REPORT_CREATED = 'REPORT_CREATED',
-}
-
-export enum AdminActivityLevel {
-  INFO = 'info',
-  WARNING = 'warning',
-}
-
 export interface AdminUser {
   id: string;
   lastname: string;
@@ -36,16 +24,9 @@ export interface AdminPixelBoard {
   status: PixelBoardStatus;
   allow_override: boolean;
   delay_seconds: number;
+  endAt?: string;
   contributorCount: number;
   updatedAt: string;
-}
-
-export interface AdminActivity {
-  id: string;
-  type: AdminActivityType;
-  message: string;
-  createdAt: string;
-  level: AdminActivityLevel;
 }
 
 export interface AdminHeatmapPoint {
@@ -69,11 +50,9 @@ export interface AdminDashboardData {
     totalUsers: number;
     totalAdmins: number;
     activeBoards: number;
-    pendingReports: number;
   };
   users: AdminUser[];
   pixelBoards: AdminPixelBoard[];
-  activities: AdminActivity[];
 }
 
 function mapUserToAdminUser(user: IUser): AdminUser {
@@ -99,6 +78,7 @@ function mapBoardToAdminBoard(board: IPixelBoard): AdminPixelBoard {
     status: board.status,
     allow_override: board.allow_override,
     delay_seconds: board.delay_seconds,
+    endAt: board.endAt,
     contributorCount: board.contributions?.length ?? 0,
     updatedAt: board.updatedAt,
   };
@@ -112,7 +92,7 @@ export async function adminGetPixelBoards(): Promise<IPixelBoard[]> {
 export type AdminCreatePixelBoardPayload = Pick<
   IPixelBoard,
   'name' | 'width' | 'height' | 'delay_seconds' | 'allow_override' | 'status'
->;
+> & { endAt?: string };
 
 export async function adminCreatePixelBoard(payload: AdminCreatePixelBoardPayload): Promise<IPixelBoard> {
   const { data } = await api.post<IPixelBoard>('/admin/pixelboards', payload);
@@ -121,7 +101,7 @@ export async function adminCreatePixelBoard(payload: AdminCreatePixelBoardPayloa
 
 export type AdminUpdatePixelBoardPayload = Partial<
   Pick<IPixelBoard, 'name' | 'width' | 'height' | 'delay_seconds' | 'allow_override' | 'status'>
->;
+> & { endAt?: string | null };
 
 export async function adminUpdatePixelBoard(
   boardId: string,
@@ -145,7 +125,6 @@ export async function adminGetPixelBoardHeatmap(
   return data;
 }
 
-
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {
   const [usersRes, boardsRes, statsRes] = await Promise.all([
     api.get<IUser[]>('/admin/users'),
@@ -160,12 +139,9 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
       totalUsers: statsRes.data.totalUsers,
       totalAdmins: usersRes.data.filter((u) => u.role === UserRole.ADMIN).length,
       activeBoards: statsRes.data.activeBoards,
-      // pas d'endpoint "reports" pour le moment
-      pendingReports: 0,
     },
     users: usersRes.data.map(mapUserToAdminUser),
     pixelBoards: boardsRes.data.map(mapBoardToAdminBoard),
-    activities: [],
   };
 }
 
@@ -174,13 +150,8 @@ export async function toggleUserRole(_userId: string): Promise<AdminDashboardDat
     await api.patch(`/admin/users/${_userId}/role`);
     return getAdminDashboardData();
   } catch (err: unknown) {
-    // Axios renvoie souvent un message générique ("Request failed with status code 400").
-    // On remonte le message API si présent.
     if (typeof err === 'object' && err && 'isAxiosError' in err) {
-      const axiosErr = err as {
-        response?: { data?: unknown };
-      };
-
+      const axiosErr = err as { response?: { data?: unknown } };
       const data = axiosErr.response?.data;
       if (data && typeof data === 'object' && 'message' in data) {
         const message = (data as { message?: unknown }).message;
@@ -189,51 +160,6 @@ export async function toggleUserRole(_userId: string): Promise<AdminDashboardDat
         }
       }
     }
-
     throw err;
   }
-}
-
-export async function increaseBoardDelay(
-  boardId: string,
-  amount = 15,
-): Promise<AdminDashboardData> {
-  // Conserve l'API utilisée par certaines pages, mais effectue un vrai update.
-  const boards = await adminGetPixelBoards();
-  const target = boards.find((b) => b.id === boardId);
-  if (!target) throw new Error('Board not found');
-  await adminUpdatePixelBoard(boardId, {
-    delay_seconds: Math.min(300, (target.delay_seconds ?? 0) + amount),
-  });
-  return getAdminDashboardData();
-}
-
-export async function resolveOneReport(): Promise<AdminDashboardData> {
-  throw new Error('Not implemented: moderation/report endpoints missing');
-}
-
-export async function applyDefaultDelay(delaySeconds: number): Promise<AdminDashboardData> {
-  // Applique côté client en appelant l'update board par board (pas d'endpoint bulk).
-  const boards = await adminGetPixelBoards();
-  await Promise.all(
-    boards
-      .filter((b) => b.status === PixelBoardStatus.IN_PROGRESS)
-      .map((b) => adminUpdatePixelBoard(b.id, { delay_seconds: delaySeconds })),
-  );
-  return getAdminDashboardData();
-}
-
-export async function toggleOverridePolicy(): Promise<AdminDashboardData> {
-  const boards = await adminGetPixelBoards();
-  const hasEnabled = boards.some(
-    (b) => b.status === PixelBoardStatus.IN_PROGRESS && b.allow_override,
-  );
-  await Promise.all(
-    boards
-      .filter((b) => b.status === PixelBoardStatus.IN_PROGRESS)
-      // Important: ne modifier QUE allow_override (ne jamais envoyer delay_seconds ici).
-      .map((b) => adminUpdatePixelBoard(b.id, { allow_override: !hasEnabled })),
-  );
-
-  return getAdminDashboardData();
 }

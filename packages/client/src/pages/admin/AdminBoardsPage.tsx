@@ -29,6 +29,20 @@ import {
   type AdminPixelBoard,
 } from '@/services/admin.service';
 
+/** Convert an ISO string to the value format expected by <input type="datetime-local"> */
+function toDatetimeLocal(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  // datetime-local expects "YYYY-MM-DDTHH:mm"
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Convert a datetime-local string back to ISO, or undefined if empty */
+function fromDatetimeLocal(value: string): string | undefined {
+  return value ? new Date(value).toISOString() : undefined;
+}
+
 function AdminBoardsPage() {
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +59,7 @@ function AdminBoardsPage() {
   const [editDelay, setEditDelay] = useState<number>(60);
   const [editAllowOverride, setEditAllowOverride] = useState(false);
   const [editStatus, setEditStatus] = useState<PixelBoardStatus>(PixelBoardStatus.IN_PROGRESS);
+  const [editEndAt, setEditEndAt] = useState('');
 
   const [createName, setCreateName] = useState('');
   const [createWidth, setCreateWidth] = useState<number>(32);
@@ -52,6 +67,7 @@ function AdminBoardsPage() {
   const [createDelay, setCreateDelay] = useState<number>(60);
   const [createAllowOverride, setCreateAllowOverride] = useState(false);
   const [createStatus, setCreateStatus] = useState<PixelBoardStatus>(PixelBoardStatus.IN_PROGRESS);
+  const [createEndAt, setCreateEndAt] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -78,6 +94,7 @@ function AdminBoardsPage() {
     setEditDelay(board.delay_seconds);
     setEditAllowOverride(board.allow_override);
     setEditStatus(board.status);
+    setEditEndAt(toDatetimeLocal(board.endAt));
     setEditOpen(true);
   };
 
@@ -98,6 +115,7 @@ function AdminBoardsPage() {
         delay_seconds: editDelay,
         allow_override: editAllowOverride,
         status: editStatus,
+        endAt: fromDatetimeLocal(editEndAt) ?? null,
       });
       await refresh();
       setEditOpen(false);
@@ -134,6 +152,7 @@ function AdminBoardsPage() {
     setCreateDelay(60);
     setCreateAllowOverride(false);
     setCreateStatus(PixelBoardStatus.IN_PROGRESS);
+    setCreateEndAt('');
     setCreateOpen(true);
   };
 
@@ -148,6 +167,7 @@ function AdminBoardsPage() {
         delay_seconds: createDelay,
         allow_override: createAllowOverride,
         status: createStatus,
+        ...(createEndAt ? { endAt: fromDatetimeLocal(createEndAt) } : {}),
       });
       await refresh();
       setCreateOpen(false);
@@ -280,6 +300,26 @@ function AdminBoardsPage() {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="edit-board-endat">Date de fin (optionnel)</Label>
+              <Input
+                id="edit-board-endat"
+                type="datetime-local"
+                value={editEndAt}
+                onChange={(e) => setEditEndAt(e.target.value)}
+                disabled={actionLoading}
+              />
+              {editEndAt && (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline"
+                  onClick={() => setEditEndAt('')}
+                >
+                  Supprimer la date de fin
+                </button>
+              )}
+            </div>
+
             <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
               <div className="space-y-1">
                 <p className="text-sm font-medium">Statut</p>
@@ -405,9 +445,23 @@ function AdminBoardsPage() {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="create-board-endat">Date de fin (optionnel)</Label>
+              <Input
+                id="create-board-endat"
+                type="datetime-local"
+                value={createEndAt}
+                onChange={(e) => setCreateEndAt(e.target.value)}
+                disabled={actionLoading}
+              />
+              <p className="text-xs text-muted-foreground">
+                Le board passera automatiquement à "Terminé" à cette date.
+              </p>
+            </div>
+
             <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
               <div className="space-y-1">
-                <p className="text-sm font-medium">Statut</p>
+                <p className="text-sm font-medium">Statut initial</p>
                 <p className="text-xs text-muted-foreground">
                   {createStatus === PixelBoardStatus.IN_PROGRESS ? 'En cours' : 'Terminé'}
                 </p>

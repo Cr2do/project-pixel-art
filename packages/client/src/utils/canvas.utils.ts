@@ -22,6 +22,11 @@ export const CANVAS_HOVER_COLOR = 'rgba(255,255,255,0.35)';
 export const CANVAS_EMPTY_COLOR = '#F8F9FA';
 export const CANVAS_GRID_MIN_CELL_SIZE = 4;
 
+export const CANVAS_MIN_CELL_SIZE = 2;
+export const CANVAS_MAX_CELL_SIZE = 40;
+export const CANVAS_DEFAULT_CELL_SIZE = 20;
+export const CANVAS_ZOOM_FACTOR = 1.2;
+
 export function getCellFromMouseEvent(
   clientX: number,
   clientY: number,

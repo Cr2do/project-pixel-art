@@ -7,15 +7,18 @@ import {
   CANVAS_HOVER_COLOR,
   CANVAS_EMPTY_COLOR,
   CANVAS_GRID_MIN_CELL_SIZE,
-  getCellFromMouseEvent,
+  CANVAS_MIN_CELL_SIZE,
+  CANVAS_MAX_CELL_SIZE,
+  CANVAS_DEFAULT_CELL_SIZE,
+  CANVAS_ZOOM_FACTOR,
 } from '@/utils/canvas.utils';
 import { Button } from '@/components/ui/button';
 import type { IPixelBoard, IPixel } from '@/types';
 
-const MIN_CELL_SIZE = 2;
-const MAX_CELL_SIZE = 40;
-const DEFAULT_CELL_SIZE = 10;
-const ZOOM_FACTOR = 1.2;
+const MIN_CELL_SIZE = CANVAS_MIN_CELL_SIZE;
+const MAX_CELL_SIZE = CANVAS_MAX_CELL_SIZE;
+const DEFAULT_CELL_SIZE = CANVAS_DEFAULT_CELL_SIZE;
+const ZOOM_FACTOR = CANVAS_ZOOM_FACTOR;
 
 interface ExternalPixel {
   x: number;
@@ -36,7 +39,13 @@ export function PixelCanvas({ board, pixels: initialPixels, isActive, onPixelPla
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cellSizeRef = useRef(DEFAULT_CELL_SIZE);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ x: 0, y: 0 });
+  const didPanRef = useRef(false);
+
   const [cellSize, setCellSize] = useState(DEFAULT_CELL_SIZE);
+  const [isPanning, setIsPanning] = useState(false);
 
   const {
     pixels,
@@ -62,96 +71,164 @@ export function PixelCanvas({ board, pixels: initialPixels, isActive, onPixelPla
     if (!ctx) return;
 
     const cs = cellSizeRef.current;
-
-    canvas.width = cs * board.width;
-    canvas.height = cs * board.height;
+    const { x: ox, y: oy } = offsetRef.current;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Background behind and around the board
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Board pixels
     for (let y = 0; y < board.height; y++) {
       for (let x = 0; x < board.width; x++) {
         ctx.fillStyle = pixels[y][x] || CANVAS_EMPTY_COLOR;
-        ctx.fillRect(x * cs, y * cs, cs, cs);
+        ctx.fillRect(x * cs + ox, y * cs + oy, cs, cs);
       }
     }
 
+    // Grid (only when cells are large enough)
     if (cs >= CANVAS_GRID_MIN_CELL_SIZE) {
       ctx.strokeStyle = CANVAS_GRID_COLOR;
       ctx.lineWidth = 0.5;
       for (let x = 0; x <= board.width; x++) {
         ctx.beginPath();
-        ctx.moveTo(x * cs, 0);
-        ctx.lineTo(x * cs, board.height * cs);
+        ctx.moveTo(x * cs + ox, oy);
+        ctx.lineTo(x * cs + ox, board.height * cs + oy);
         ctx.stroke();
       }
       for (let y = 0; y <= board.height; y++) {
         ctx.beginPath();
-        ctx.moveTo(0, y * cs);
-        ctx.lineTo(board.width * cs, y * cs);
+        ctx.moveTo(ox, y * cs + oy);
+        ctx.lineTo(board.width * cs + ox, y * cs + oy);
         ctx.stroke();
       }
     }
 
+    // Hover highlight
     if (hoveredCell && isActive && cooldownRemaining === 0) {
       ctx.fillStyle = CANVAS_HOVER_COLOR;
-      ctx.fillRect(hoveredCell.x * cs, hoveredCell.y * cs, cs, cs);
+      ctx.fillRect(hoveredCell.x * cs + ox, hoveredCell.y * cs + oy, cs, cs);
     }
   }, [pixels, hoveredCell, board.width, board.height, isActive, cooldownRemaining]);
 
-  // Keep ref in sync and redraw when cellSize changes
+  // Init canvas size and center board on mount
+  useEffect(() => {
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+    const { width, height } = container.getBoundingClientRect();
+    canvas.width = width;
+    canvas.height = height;
+    const cs = cellSizeRef.current;
+    offsetRef.current = {
+      x: (width - board.width * cs) / 2,
+      y: (height - board.height * cs) / 2,
+    };
+    drawCanvas();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Redraw on pixel / hover changes
+  useEffect(() => {
+    drawCanvas();
+  }, [drawCanvas]);
+
+  // Keep ref in sync with state, redraw
   useEffect(() => {
     cellSizeRef.current = cellSize;
     drawCanvas();
   }, [cellSize, drawCanvas]);
 
+  // Resize canvas when container changes
   useEffect(() => {
-    drawCanvas();
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+    const observer = new ResizeObserver(() => {
+      const { width, height } = container.getBoundingClientRect();
+      canvas.width = width;
+      canvas.height = height;
+      drawCanvas();
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
   }, [drawCanvas]);
 
-  // Zoom with mouse wheel
+  // Zoom with mouse wheel, centered on cursor position
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      setCellSize((prev) => {
-        const next = e.deltaY < 0
-          ? Math.round(prev * ZOOM_FACTOR)
-          : Math.round(prev / ZOOM_FACTOR);
-        return Math.min(MAX_CELL_SIZE, Math.max(MIN_CELL_SIZE, next));
-      });
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const prevCs = cellSizeRef.current;
+      const rawNext = e.deltaY < 0 ? Math.round(prevCs * ZOOM_FACTOR) : Math.round(prevCs / ZOOM_FACTOR);
+      const newCs = Math.min(MAX_CELL_SIZE, Math.max(MIN_CELL_SIZE, rawNext));
+      if (newCs === prevCs) return;
+      offsetRef.current = {
+        x: mx - (mx - offsetRef.current.x) * (newCs / prevCs),
+        y: my - (my - offsetRef.current.y) * (newCs / prevCs),
+      };
+      cellSizeRef.current = newCs;
+      setCellSize(newCs);
+      drawCanvas();
     };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, [drawCanvas]);
 
-    container.addEventListener('wheel', onWheel, { passive: false });
-    return () => container.removeEventListener('wheel', onWheel);
+  // Pan — global listeners so dragging works even when cursor leaves the canvas
+  useEffect(() => {
+    const onWindowMouseMove = (e: MouseEvent) => {
+      if (!isPanningRef.current) return;
+      offsetRef.current = {
+        x: e.clientX - panStartRef.current.x,
+        y: e.clientY - panStartRef.current.y,
+      };
+      didPanRef.current = true;
+      setHoveredCell(null);
+      drawCanvas();
+    };
+    const onWindowMouseUp = () => {
+      isPanningRef.current = false;
+      setIsPanning(false);
+    };
+    window.addEventListener('mousemove', onWindowMouseMove);
+    window.addEventListener('mouseup', onWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onWindowMouseMove);
+      window.removeEventListener('mouseup', onWindowMouseUp);
+    };
+  }, [drawCanvas, setHoveredCell]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0) return;
+    isPanningRef.current = true;
+    didPanRef.current = false;
+    setIsPanning(true);
+    panStartRef.current = {
+      x: e.clientX - offsetRef.current.x,
+      y: e.clientY - offsetRef.current.y,
+    };
   }, []);
-
-  const handleZoomIn = () =>
-    setCellSize((prev) => Math.min(MAX_CELL_SIZE, Math.round(prev * ZOOM_FACTOR)));
-
-  const handleZoomOut = () =>
-    setCellSize((prev) => Math.max(MIN_CELL_SIZE, Math.round(prev / ZOOM_FACTOR)));
-
-  const handleFit = () => {
-    const container = containerRef.current;
-    if (!container) return;
-    const { width, height } = container.getBoundingClientRect();
-    const fitted = Math.max(
-      MIN_CELL_SIZE,
-      Math.floor(Math.min(width / board.width, height / board.height)),
-    );
-    setCellSize(fitted);
-  };
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!isActive) return;
+      if (!isActive || isPanningRef.current) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const cell = getCellFromMouseEvent(e.clientX, e.clientY, canvas, cellSizeRef.current);
-      if (cell.x >= 0 && cell.x < board.width && cell.y >= 0 && cell.y < board.height) {
-        setHoveredCell(cell);
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const cs = cellSizeRef.current;
+      const { x: ox, y: oy } = offsetRef.current;
+      const cellX = Math.floor((mx - ox) / cs);
+      const cellY = Math.floor((my - oy) / cs);
+      if (cellX >= 0 && cellX < board.width && cellY >= 0 && cellY < board.height) {
+        setHoveredCell({ x: cellX, y: cellY });
       } else {
         setHoveredCell(null);
       }
@@ -165,16 +242,72 @@ export function PixelCanvas({ board, pixels: initialPixels, isActive, onPixelPla
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!isActive || cooldownRemaining > 0) return;
+      if (!isActive || cooldownRemaining > 0 || didPanRef.current) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const cell = getCellFromMouseEvent(e.clientX, e.clientY, canvas, cellSizeRef.current);
-      if (cell.x >= 0 && cell.x < board.width && cell.y >= 0 && cell.y < board.height) {
-        placePixel(cell.x, cell.y);
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const cs = cellSizeRef.current;
+      const { x: ox, y: oy } = offsetRef.current;
+      const cellX = Math.floor((mx - ox) / cs);
+      const cellY = Math.floor((my - oy) / cs);
+      if (cellX >= 0 && cellX < board.width && cellY >= 0 && cellY < board.height) {
+        placePixel(cellX, cellY);
       }
     },
     [isActive, cooldownRemaining, board.width, board.height, placePixel],
   );
+
+  const handleZoomIn = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const prevCs = cellSizeRef.current;
+    const newCs = Math.min(MAX_CELL_SIZE, Math.round(prevCs * ZOOM_FACTOR));
+    if (newCs === prevCs) return;
+    offsetRef.current = {
+      x: cx - (cx - offsetRef.current.x) * (newCs / prevCs),
+      y: cy - (cy - offsetRef.current.y) * (newCs / prevCs),
+    };
+    cellSizeRef.current = newCs;
+    setCellSize(newCs);
+    drawCanvas();
+  };
+
+  const handleZoomOut = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const prevCs = cellSizeRef.current;
+    const newCs = Math.max(MIN_CELL_SIZE, Math.round(prevCs / ZOOM_FACTOR));
+    if (newCs === prevCs) return;
+    offsetRef.current = {
+      x: cx - (cx - offsetRef.current.x) * (newCs / prevCs),
+      y: cy - (cy - offsetRef.current.y) * (newCs / prevCs),
+    };
+    cellSizeRef.current = newCs;
+    setCellSize(newCs);
+    drawCanvas();
+  };
+
+  const handleFit = () => {
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+    const { width, height } = container.getBoundingClientRect();
+    const fitted = Math.floor(Math.min(width / board.width, height / board.height));
+    const newCs = Math.min(MAX_CELL_SIZE, Math.max(MIN_CELL_SIZE, fitted));
+    offsetRef.current = {
+      x: (width - board.width * newCs) / 2,
+      y: (height - board.height * newCs) / 2,
+    };
+    cellSizeRef.current = newCs;
+    setCellSize(newCs);
+    drawCanvas();
+  };
 
   return (
     <div className="space-y-4">
@@ -193,42 +326,39 @@ export function PixelCanvas({ board, pixels: initialPixels, isActive, onPixelPla
           <Maximize2 className="size-4" />
         </Button>
         <span className="text-xs text-muted-foreground ml-2">
-          Molette pour zoomer · {board.width} × {board.height} pixels
+          Molette pour zoomer · Cliquer-glisser pour se déplacer · {board.width} × {board.height} pixels
         </span>
       </div>
 
-      {/* Canvas container — height adapts to board, capped at 85vh */}
+      {/* Canvas container — fixed height, pan handled inside canvas */}
       <div
         ref={containerRef}
-        className="relative w-full overflow-auto rounded-lg border bg-muted/30"
+        className="relative w-full rounded-lg border overflow-hidden"
         style={{
-          height: Math.min(cellSize * board.height, window.innerHeight * 0.85),
-          minHeight: 200,
+          height: Math.min(window.innerHeight * 0.85, 700),
+          minHeight: 300,
         }}
       >
-        {/* Inner wrapper centers the canvas when smaller than the container */}
-        <div className="flex items-center justify-center min-w-full min-h-full">
-          <div className="relative">
-            <canvas
-              ref={canvasRef}
-              className={isActive ? 'cursor-crosshair' : 'cursor-default'}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-              onClick={handleClick}
-            />
-            {hoveredCell && isActive && (
-              <div className="absolute top-2 left-2 rounded bg-black/70 px-2 py-1 text-xs text-white pointer-events-none space-y-0.5">
-                <div>x: {hoveredCell.x}, y: {hoveredCell.y}</div>
-                {authors[hoveredCell.y]?.[hoveredCell.x] && (
-                  <div className="flex items-center gap-1 text-white/80">
-                    <User className="size-3" />
-                    {authors[hoveredCell.y][hoveredCell.x]}
-                  </div>
-                )}
+        <canvas
+          ref={canvasRef}
+          className={isPanning ? 'cursor-grabbing' : isActive ? 'cursor-crosshair' : 'cursor-grab'}
+          style={{ position: 'absolute', top: 0, left: 0 }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          onClick={handleClick}
+        />
+        {hoveredCell && isActive && (
+          <div className="absolute top-2 left-2 rounded bg-black/70 px-2 py-1 text-xs text-white pointer-events-none space-y-0.5">
+            <div>x: {hoveredCell.x}, y: {hoveredCell.y}</div>
+            {authors[hoveredCell.y]?.[hoveredCell.x] && (
+              <div className="flex items-center gap-1 text-white/80">
+                <User className="size-3" />
+                {authors[hoveredCell.y][hoveredCell.x]}
               </div>
             )}
           </div>
-        </div>
+        )}
       </div>
 
       {isActive && (

@@ -8,7 +8,6 @@ function clamp01(v: number) {
 }
 
 function intensityToColor(t: number) {
-  // 0 => transparent-ish, 1 => strong red. Keep simple and readable.
   const alpha = 0.05 + 0.95 * clamp01(t);
   return `rgba(239,68,68,${alpha})`; // tailwind red-500
 }
@@ -33,7 +32,7 @@ function AdminHeatmapPage() {
         if (cancelled) return;
         setBoards(data);
         // default to first board
-        if (data.length > 0) setSelectedBoardId(data[0].id);
+        if (data.length > 0) setSelectedBoardId(data[0]?.id ?? '');
       } catch (e) {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : 'Erreur lors du chargement des boards');
@@ -78,7 +77,6 @@ function AdminHeatmapPage() {
     return map;
   }, [heatmap]);
 
-  // Draw heatmap when data changes or container resizes
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -91,7 +89,6 @@ function AdminHeatmapPage() {
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
 
-      // devicePixelRatio for crispness
       const dpr = window.devicePixelRatio || 1;
       canvas.style.width = `${containerWidth}px`;
       canvas.style.height = `${containerHeight}px`;
@@ -102,7 +99,6 @@ function AdminHeatmapPage() {
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // background
       ctx.clearRect(0, 0, containerWidth, containerHeight);
       ctx.fillStyle = '#0b0f19';
       ctx.fillRect(0, 0, containerWidth, containerHeight);
@@ -113,14 +109,12 @@ function AdminHeatmapPage() {
       const offsetX = Math.floor((containerWidth - gridWidth) / 2);
       const offsetY = Math.floor((containerHeight - gridHeight) / 2);
 
-      // draw cells (sparse: only points with count>0)
       for (const p of heatmap.points) {
         const t = p.count / maxCount;
         ctx.fillStyle = intensityToColor(t);
         ctx.fillRect(offsetX + p.x * cellSize, offsetY + p.y * cellSize, cellSize, cellSize);
       }
 
-      // grid lines (light)
       ctx.strokeStyle = 'rgba(255,255,255,0.06)';
       ctx.lineWidth = 1;
       if (cellSize >= 6) {
@@ -161,7 +155,7 @@ function AdminHeatmapPage() {
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium">PixelBoard</label>
           <select
-            className="h-10 min-w-[260px] rounded-md border border-input bg-background px-3 text-sm"
+            className="h-10 min-w-65 rounded-md border border-input bg-background px-3 text-sm"
             value={selectedBoardId}
             onChange={(e) => setSelectedBoardId(e.target.value)}
             disabled={loadingBoards}
@@ -188,7 +182,7 @@ function AdminHeatmapPage() {
           {!loadingHeatmap && heatmap && heatmap.points.length === 0 && (
             <div className="text-sm text-muted-foreground">Aucun placement enregistré pour ce board.</div>
           )}
-          <div ref={containerRef} className="relative mt-2 h-[420px] w-full overflow-hidden rounded-md bg-muted/10">
+          <div ref={containerRef} className="relative mt-2 h-105 w-full overflow-hidden rounded-md bg-muted/10">
             <canvas ref={canvasRef} className="block h-full w-full" />
           </div>
         </div>

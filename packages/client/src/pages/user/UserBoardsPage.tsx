@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
 import * as boardService from '@/services/pixelboard.service';
 import { getApiError } from '@/services/api.utils';
@@ -124,6 +125,13 @@ function CreateBoardDialog({ onCreated }: { onCreated: (board: IPixelBoard) => v
             <Label htmlFor="endAt">Date de fin (optionnel)</Label>
             <Input id="endAt" type="datetime-local" {...register('endAt')} />
             {errors.endAt && <p className="text-sm text-destructive">{errors.endAt.message}</p>}
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Superposition de pixels</p>
+              <p className="text-xs text-muted-foreground">Les utilisateurs peuvent réécrire les pixels existants</p>
+            </div>
+            <Switch {...register('allow_override')} />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

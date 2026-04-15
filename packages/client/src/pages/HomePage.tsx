@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Clock,
@@ -27,10 +27,12 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
-import * as mapService from '@/services/map.service';
-import type { GlobalMapResponse } from '@/services/map.service';
+import * as boardService from '@/services/pixelboard.service';
+import * as pixelService from '@/services/pixel.service';
 import { getApiError } from '@/services/api.utils';
 import { GlobalMapCanvas } from '@/components/map/GlobalMapCanvas';
+import { useGlobalMapSocket } from '@/hooks/use-global-map-socket';
+import type { IPixelBoard, IPixel } from '@/types';
 
 const FEATURES = [
   {
@@ -286,17 +288,54 @@ function FeaturesSection() {
 
 
 function ActiveBoardsSection() {
-  const [mapData, setMapData] = useState<GlobalMapResponse | null>(null);
+  const [boards, setBoards] = useState<IPixelBoard[]>([]);
+  const [pixelsByBoard, setPixelsByBoard] = useState<Record<string, IPixel[]>>({});
   const [loading, setLoading] = useState(true);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    mapService
-      .getGlobalMap()
-      .then(setMapData)
+    boardService
+      .getAll()
+      .then((result) => {
+        setBoards(result);
+        result.forEach((board) => {
+          pixelService
+            .getByBoard(board.id)
+            .then((pixels) => setPixelsByBoard((prev) => ({ ...prev, [board.id]: pixels })))
+            .catch(() => {});
+        });
+      })
       .catch((err) => toast.error(getApiError(err)))
       .finally(() => setLoading(false));
   }, []);
+
+  const boardIds = useMemo(() => boards.map((b) => b.id), [boards]);
+
+  useGlobalMapSocket(boardIds, (event) => {
+    setPixelsByBoard((prev) => {
+      const existing = prev[event.boardId] ?? [];
+      const idx = existing.findIndex(
+        (p) => p.position_x === event.position_x && p.position_y === event.position_y,
+      );
+      const updated = [...existing];
+      if (idx >= 0) {
+        updated[idx] = { ...updated[idx], color: event.color };
+      } else {
+        updated.push({
+          id: `${event.boardId}-${event.position_x}-${event.position_y}`,
+          pixelBoardId: event.boardId,
+          userId: event.userId,
+          username: event.username,
+          position_x: event.position_x,
+          position_y: event.position_y,
+          color: event.color,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      return { ...prev, [event.boardId]: updated };
+    });
+  });
 
   return (
     <section id="boards" className="py-20 bg-muted/20">
@@ -318,7 +357,7 @@ function ActiveBoardsSection() {
 
         {loading ? (
           <Skeleton className="w-full h-125 rounded-lg" />
-        ) : !mapData || mapData.boards.length === 0 ? (
+        ) : boards.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <Grid3X3 className="size-12 text-muted-foreground mb-4" />
@@ -326,7 +365,7 @@ function ActiveBoardsSection() {
             </CardContent>
           </Card>
         ) : (
-          <GlobalMapCanvas data={mapData} />
+          <GlobalMapCanvas boards={boards} pixelsByBoard={pixelsByBoard} />
         )}
       </div>
     </section>

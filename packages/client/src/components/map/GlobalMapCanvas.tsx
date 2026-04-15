@@ -1,40 +1,51 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { MapBoard, GlobalMapResponse } from '@/services/map.service';
+import {
+  CANVAS_GRID_COLOR,
+  CANVAS_GRID_MIN_CELL_SIZE,
+  CANVAS_EMPTY_COLOR,
+  CANVAS_MIN_CELL_SIZE,
+  CANVAS_MAX_CELL_SIZE,
+  CANVAS_DEFAULT_CELL_SIZE,
+  CANVAS_ZOOM_FACTOR,
+} from '@/utils/canvas.utils';
+import type { IPixelBoard, IPixel } from '@/types';
 
-const EMPTY_COLOR = '#F8F9FA';
 const BOARD_BORDER_ACTIVE = '#3b82f6';
 const BOARD_BORDER_FINISHED = '#94a3b8';
 const BOARD_LABEL_BG = 'rgba(0,0,0,0.6)';
-const MIN_SCALE = 0.2;
-const MAX_SCALE = 8;
-const ZOOM_FACTOR = 1.25;
-const LABEL_MIN_SCALE = 1.5;
+const MIN_CELL_SIZE = CANVAS_MIN_CELL_SIZE;
+const MAX_CELL_SIZE = CANVAS_MAX_CELL_SIZE;
+const DEFAULT_CELL_SIZE = CANVAS_DEFAULT_CELL_SIZE;
+const ZOOM_FACTOR = CANVAS_ZOOM_FACTOR;
+
+const zoomInStep = (cs: number) => Math.min(MAX_CELL_SIZE, Math.max(cs + 1, Math.round(cs * ZOOM_FACTOR)));
+const zoomOutStep = (cs: number) => Math.max(MIN_CELL_SIZE, Math.min(cs - 1, Math.round(cs / ZOOM_FACTOR)));
 
 interface Props {
-  data: GlobalMapResponse;
+  boards: IPixelBoard[];
+  pixelsByBoard: Record<string, IPixel[]>;
 }
 
-interface HoveredBoard {
-  board: MapBoard;
-  screenX: number;
-  screenY: number;
-}
-
-export function GlobalMapCanvas({ data }: Props) {
+export function GlobalMapCanvas({ boards, pixelsByBoard }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const scaleRef = useRef(1);
+  const cellSizeRef = useRef(DEFAULT_CELL_SIZE);
   const offsetRef = useRef({ x: 0, y: 0 });
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
-  const didPanRef = useRef(false);
+  const pixelsByBoardRef = useRef(pixelsByBoard);
 
-  const [scale, setScale] = useState(1);
-  const [hoveredBoard, setHoveredBoard] = useState<HoveredBoard | null>(null);
-  const navigate = useNavigate();
+  const [cellSize, setCellSize] = useState(DEFAULT_CELL_SIZE);
+  const [isPanning, setIsPanning] = useState(false);
+
+  useEffect(() => {
+    pixelsByBoardRef.current = pixelsByBoard;
+  }, [pixelsByBoard]);
+
+  const globalWidth = boards.reduce((max, b) => Math.max(max, b.position_x + b.width), 0);
+  const globalHeight = boards.reduce((max, b) => Math.max(max, b.position_y + b.height), 0);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -42,87 +53,102 @@ export function GlobalMapCanvas({ data }: Props) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const cs = cellSizeRef.current;
     const { x: ox, y: oy } = offsetRef.current;
-    const s = scaleRef.current;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#e2e8f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (const board of data.boards) {
-      const bx = board.position_x * s + ox;
-      const by = board.position_y * s + oy;
-      const bw = board.width * s;
-      const bh = board.height * s;
+    for (const board of boards) {
+      const bx = board.position_x * cs + ox;
+      const by = board.position_y * cs + oy;
+      const bw = board.width * cs;
+      const bh = board.height * cs;
 
-      // Board background
-      ctx.fillStyle = EMPTY_COLOR;
+      ctx.fillStyle = CANVAS_EMPTY_COLOR;
       ctx.fillRect(bx, by, bw, bh);
 
-      // Pixels
-      for (const px of board.pixels) {
+      const pixels = pixelsByBoardRef.current[board.id] ?? [];
+      for (const px of pixels) {
         ctx.fillStyle = px.color;
-        ctx.fillRect(bx + px.x * s, by + px.y * s, Math.max(1, s), Math.max(1, s));
+        ctx.fillRect(bx + px.position_x * cs, by + px.position_y * cs, cs, cs);
       }
 
-      // Board border
+      if (cs >= CANVAS_GRID_MIN_CELL_SIZE) {
+        ctx.strokeStyle = CANVAS_GRID_COLOR;
+        ctx.lineWidth = 0.5;
+        for (let x = 0; x <= board.width; x++) {
+          ctx.beginPath();
+          ctx.moveTo(bx + x * cs, by);
+          ctx.lineTo(bx + x * cs, by + bh);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= board.height; y++) {
+          ctx.beginPath();
+          ctx.moveTo(bx, by + y * cs);
+          ctx.lineTo(bx + bw, by + y * cs);
+          ctx.stroke();
+        }
+      }
+
       ctx.strokeStyle = board.status === 'IN_PROGRESS' ? BOARD_BORDER_ACTIVE : BOARD_BORDER_FINISHED;
-      ctx.lineWidth = Math.max(1, s * 0.5);
+      ctx.lineWidth = Math.max(1, cs * 0.1);
       ctx.strokeRect(bx, by, bw, bh);
 
-      // Board label (only when zoomed enough)
-      if (s >= LABEL_MIN_SCALE) {
-        const label = board.name;
-        const fontSize = Math.min(14, Math.max(8, s * 2));
-        ctx.font = `${fontSize}px sans-serif`;
-        const textW = ctx.measureText(label).width;
-        const padX = 4;
-        const padY = 2;
-        const lx = bx + 4;
-        const ly = by + 4;
-        ctx.fillStyle = BOARD_LABEL_BG;
-        ctx.fillRect(lx - padX, ly - padY, textW + padX * 2, fontSize + padY * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(label, lx, ly + fontSize - 2);
-      }
+      const label = board.name;
+      const fontSize = Math.min(14, Math.max(8, cs * 2));
+      ctx.font = `${fontSize}px sans-serif`;
+      const textW = ctx.measureText(label).width;
+      const lx = bx + 4;
+      const ly = by + 4;
+      ctx.fillStyle = BOARD_LABEL_BG;
+      ctx.fillRect(lx - 4, ly - 2, textW + 8, fontSize + 4);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(label, lx, ly + fontSize - 2);
     }
-  }, [data]);
+  }, [boards]);
 
-  // Fit all boards in view on mount
+  useEffect(() => {
+    draw();
+  }, [draw, pixelsByBoard]);
+
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
-
     const { width, height } = container.getBoundingClientRect();
     canvas.width = width;
     canvas.height = height;
 
-    if (data.globalWidth === 0 || data.globalHeight === 0) {
+    if (globalWidth === 0 || globalHeight === 0) {
       draw();
       return;
     }
 
-    const s = Math.min(width / data.globalWidth, height / data.globalHeight) * 0.9;
-    const ox = (width - data.globalWidth * s) / 2;
-    const oy = (height - data.globalHeight * s) / 2;
-
-    scaleRef.current = s;
-    offsetRef.current = { x: ox, y: oy };
-    setScale(s);
+    const fitted = Math.max(MIN_CELL_SIZE, Math.floor(
+      Math.min(width / globalWidth, height / globalHeight) * 0.9,
+    ));
+    const cs = Math.min(MAX_CELL_SIZE, fitted);
+    cellSizeRef.current = cs;
+    setCellSize(cs);
+    offsetRef.current = {
+      x: (width - globalWidth * cs) / 2,
+      y: (height - globalHeight * cs) / 2,
+    };
     draw();
-  }, [data, draw]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
+    cellSizeRef.current = cellSize;
     draw();
-  }, [draw]);
+  }, [cellSize, draw]);
 
-  // Resize canvas on window resize
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
-
     const observer = new ResizeObserver(() => {
       const { width, height } = container.getBoundingClientRect();
       canvas.width = width;
@@ -133,33 +159,29 @@ export function GlobalMapCanvas({ data }: Props) {
     return () => observer.disconnect();
   }, [draw]);
 
-  // Mouse wheel zoom
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
-      const factor = e.deltaY < 0 ? ZOOM_FACTOR : 1 / ZOOM_FACTOR;
-      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scaleRef.current * factor));
-
+      const prevCs = cellSizeRef.current;
+      const newCs = e.deltaY < 0 ? zoomInStep(prevCs) : zoomOutStep(prevCs);
+      if (newCs === prevCs) return;
       offsetRef.current = {
-        x: mx - (mx - offsetRef.current.x) * (newScale / scaleRef.current),
-        y: my - (my - offsetRef.current.y) * (newScale / scaleRef.current),
+        x: mx - (mx - offsetRef.current.x) * (newCs / prevCs),
+        y: my - (my - offsetRef.current.y) * (newCs / prevCs),
       };
-      scaleRef.current = newScale;
-      setScale(newScale);
+      cellSizeRef.current = newCs;
+      setCellSize(newCs);
       draw();
     };
-
     canvas.addEventListener('wheel', onWheel, { passive: false });
     return () => canvas.removeEventListener('wheel', onWheel);
   }, [draw]);
 
-  // Pan — global listeners so dragging works even when cursor leaves the canvas
   useEffect(() => {
     const onWindowMouseMove = (e: MouseEvent) => {
       if (!isPanningRef.current) return;
@@ -167,15 +189,12 @@ export function GlobalMapCanvas({ data }: Props) {
         x: e.clientX - panStartRef.current.x,
         y: e.clientY - panStartRef.current.y,
       };
-      didPanRef.current = true;
       draw();
-      setHoveredBoard(null);
     };
-
     const onWindowMouseUp = () => {
       isPanningRef.current = false;
+      setIsPanning(false);
     };
-
     window.addEventListener('mousemove', onWindowMouseMove);
     window.addEventListener('mouseup', onWindowMouseUp);
     return () => {
@@ -187,71 +206,24 @@ export function GlobalMapCanvas({ data }: Props) {
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     isPanningRef.current = true;
-    didPanRef.current = false;
+    setIsPanning(true);
     panStartRef.current = { x: e.clientX - offsetRef.current.x, y: e.clientY - offsetRef.current.y };
   }, []);
-
-  // Hover detection only (panning is handled globally above)
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isPanningRef.current) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const s = scaleRef.current;
-    const { x: ox, y: oy } = offsetRef.current;
-    const worldX = (mx - ox) / s;
-    const worldY = (my - oy) / s;
-
-    const found = data.boards.find(
-      (b) =>
-        worldX >= b.position_x &&
-        worldX <= b.position_x + b.width &&
-        worldY >= b.position_y &&
-        worldY <= b.position_y + b.height,
-    );
-
-    setHoveredBoard(found ? { board: found, screenX: e.clientX, screenY: e.clientY } : null);
-  }, [data]);
-
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (didPanRef.current) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const s = scaleRef.current;
-    const { x: ox, y: oy } = offsetRef.current;
-    const worldX = (mx - ox) / s;
-    const worldY = (my - oy) / s;
-
-    const found = data.boards.find(
-      (b) =>
-        worldX >= b.position_x &&
-        worldX <= b.position_x + b.width &&
-        worldY >= b.position_y &&
-        worldY <= b.position_y + b.height,
-    );
-
-    if (found) navigate(`/boards/${found.id}`);
-  }, [data, navigate]);
 
   const handleZoomIn = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-    const newScale = Math.min(MAX_SCALE, scaleRef.current * ZOOM_FACTOR);
+    const prevCs = cellSizeRef.current;
+    const newCs = zoomInStep(prevCs);
+    if (newCs === prevCs) return;
     offsetRef.current = {
-      x: cx - (cx - offsetRef.current.x) * (newScale / scaleRef.current),
-      y: cy - (cy - offsetRef.current.y) * (newScale / scaleRef.current),
+      x: cx - (cx - offsetRef.current.x) * (newCs / prevCs),
+      y: cy - (cy - offsetRef.current.y) * (newCs / prevCs),
     };
-    scaleRef.current = newScale;
-    setScale(newScale);
+    cellSizeRef.current = newCs;
+    setCellSize(newCs);
     draw();
   };
 
@@ -260,38 +232,42 @@ export function GlobalMapCanvas({ data }: Props) {
     if (!canvas) return;
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-    const newScale = Math.max(MIN_SCALE, scaleRef.current / ZOOM_FACTOR);
+    const prevCs = cellSizeRef.current;
+    const newCs = zoomOutStep(prevCs);
+    if (newCs === prevCs) return;
     offsetRef.current = {
-      x: cx - (cx - offsetRef.current.x) * (newScale / scaleRef.current),
-      y: cy - (cy - offsetRef.current.y) * (newScale / scaleRef.current),
+      x: cx - (cx - offsetRef.current.x) * (newCs / prevCs),
+      y: cy - (cy - offsetRef.current.y) * (newCs / prevCs),
     };
-    scaleRef.current = newScale;
-    setScale(newScale);
+    cellSizeRef.current = newCs;
+    setCellSize(newCs);
     draw();
   };
 
   const handleFit = () => {
     const canvas = canvasRef.current;
-    if (!canvas || data.globalWidth === 0) return;
-    const s = Math.min(canvas.width / data.globalWidth, canvas.height / data.globalHeight) * 0.9;
+    if (!canvas || globalWidth === 0) return;
+    const fitted = Math.max(MIN_CELL_SIZE, Math.floor(
+      Math.min(canvas.width / globalWidth, canvas.height / globalHeight) * 0.9,
+    ));
+    const newCs = Math.min(MAX_CELL_SIZE, fitted);
     offsetRef.current = {
-      x: (canvas.width - data.globalWidth * s) / 2,
-      y: (canvas.height - data.globalHeight * s) / 2,
+      x: (canvas.width - globalWidth * newCs) / 2,
+      y: (canvas.height - globalHeight * newCs) / 2,
     };
-    scaleRef.current = s;
-    setScale(s);
+    cellSizeRef.current = newCs;
+    setCellSize(newCs);
     draw();
   };
 
   return (
     <div className="space-y-3">
-      {/* Controls */}
       <div className="flex items-center gap-2">
         <Button variant="outline" size="icon" onClick={handleZoomOut} title="Dézoomer">
           <ZoomOut className="size-4" />
         </Button>
         <span className="text-sm text-muted-foreground w-16 text-center tabular-nums">
-          {Math.round(scale * 100)}%
+          {cellSize}px/cel
         </span>
         <Button variant="outline" size="icon" onClick={handleZoomIn} title="Zoomer">
           <ZoomIn className="size-4" />
@@ -300,11 +276,10 @@ export function GlobalMapCanvas({ data }: Props) {
           <Maximize2 className="size-4" />
         </Button>
         <span className="text-xs text-muted-foreground ml-2">
-          Molette pour zoomer · Cliquer-glisser pour se déplacer · Cliquer sur un board pour l'ouvrir
+          Molette pour zoomer · Cliquer-glisser pour se déplacer
         </span>
       </div>
 
-      {/* Canvas */}
       <div
         ref={containerRef}
         className="relative w-full rounded-lg border overflow-hidden"
@@ -312,25 +287,10 @@ export function GlobalMapCanvas({ data }: Props) {
       >
         <canvas
           ref={canvasRef}
-          className={hoveredBoard ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}
+          className={isPanning ? 'cursor-grabbing' : 'cursor-grab'}
+          style={{ position: 'absolute', top: 0, left: 0 }}
           onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => { if (!isPanningRef.current) setHoveredBoard(null); }}
-          onClick={handleClick}
         />
-
-        {/* Hover tooltip */}
-        {hoveredBoard && (
-          <div
-            className="fixed z-50 rounded bg-black/80 px-3 py-1.5 text-xs text-white pointer-events-none"
-            style={{ left: hoveredBoard.screenX + 12, top: hoveredBoard.screenY - 10 }}
-          >
-            <span className="font-medium">{hoveredBoard.board.name}</span>
-            <span className="ml-2 text-white/60">
-              {hoveredBoard.board.width}×{hoveredBoard.board.height}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );
