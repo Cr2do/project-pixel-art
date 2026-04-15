@@ -19,6 +19,7 @@ export interface IPixelBoard {
   status: PixelBoardStatus;
   allow_override: boolean;
   delay_seconds: number;
+  endAt?: string;
   contributions: IBoardContribution[];
   createdAt: string;
   updatedAt: string;

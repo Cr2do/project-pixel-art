@@ -13,8 +13,3 @@ export interface IUser {
   updatedAt: string;
 }
 
-export interface IUpdateUserPayload {
-  lastname?: string;
-  firstname?: string;
-  email?: string;
-}

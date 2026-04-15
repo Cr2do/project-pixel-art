@@ -1,25 +1,30 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import { PIXEL_PALETTE } from '@/utils/canvas.utils';
 import type { IHoveredCell, IPixel } from '@/types';
 
 export interface PixelCanvasActions {
   pixels: string[][];
+  authors: string[][];
   selectedColor: string;
   setSelectedColor: (color: string) => void;
   cooldownRemaining: number;
   hoveredCell: IHoveredCell | null;
   setHoveredCell: (cell: IHoveredCell | null) => void;
   placePixel: (x: number, y: number) => void;
+  applyExternalPixel: (x: number, y: number, color: string, username?: string) => void;
 }
 
-function buildGrid(width: number, height: number, initialPixels: IPixel[]): string[][] {
-  const grid = Array.from({ length: height }, () => Array<string>(width).fill(''));
+function buildGrids(width: number, height: number, initialPixels: IPixel[]): { pixels: string[][]; authors: string[][] } {
+  const pixels = Array.from({ length: height }, () => Array<string>(width).fill(''));
+  const authors = Array.from({ length: height }, () => Array<string>(width).fill(''));
   for (const p of initialPixels) {
     if (p.position_y < height && p.position_x < width) {
-      grid[p.position_y][p.position_x] = p.color;
+      pixels[p.position_y][p.position_x] = p.color;
+      authors[p.position_y][p.position_x] = p.username ?? '';
     }
   }
-  return grid;
+  return { pixels, authors };
 }
 
 export function usePixelCanvas(
@@ -30,9 +35,8 @@ export function usePixelCanvas(
   initialPixels: IPixel[],
   onPlace: (x: number, y: number, color: string) => Promise<void>,
 ): PixelCanvasActions {
-  const [pixels, setPixels] = useState<string[][]>(() =>
-    buildGrid(width, height, initialPixels),
-  );
+  const [pixels, setPixels] = useState<string[][]>(() => buildGrids(width, height, initialPixels).pixels);
+  const [authors, setAuthors] = useState<string[][]>(() => buildGrids(width, height, initialPixels).authors);
   const [selectedColor, setSelectedColor] = useState<string>(PIXEL_PALETTE[3]);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [hoveredCell, setHoveredCell] = useState<IHoveredCell | null>(null);
@@ -48,8 +52,14 @@ export function usePixelCanvas(
 
   const placePixel = useCallback(
     (x: number, y: number) => {
-      if (cooldownRemaining > 0) return;
-      if (!allowOverride && pixels[y][x] !== '') return;
+      if (cooldownRemaining > 0) {
+        toast.warning(`Cooldown actif — attendez encore ${cooldownRemaining}s`, { id: 'cooldown' });
+        return;
+      }
+      if (!allowOverride && pixels[y][x] !== '') {
+        toast.warning('Ce pixel est déjà occupé et l\'écrasement n\'est pas autorisé sur ce board', { id: 'no-override' });
+        return;
+      }
 
       setPixels((prev) => {
         const next = prev.map((row) => [...row]);
@@ -76,13 +86,28 @@ export function usePixelCanvas(
     [cooldownRemaining, allowOverride, pixels, selectedColor, delaySeconds],
   );
 
+  const applyExternalPixel = useCallback((x: number, y: number, color: string, username?: string) => {
+    setPixels((prev) => {
+      const next = prev.map((row) => [...row]);
+      next[y][x] = color;
+      return next;
+    });
+    setAuthors((prev) => {
+      const next = prev.map((row) => [...row]);
+      next[y][x] = username ?? '';
+      return next;
+    });
+  }, []);
+
   return {
     pixels,
+    authors,
     selectedColor,
     setSelectedColor,
     cooldownRemaining,
     hoveredCell,
     setHoveredCell,
     placePixel,
+    applyExternalPixel,
   };
 }

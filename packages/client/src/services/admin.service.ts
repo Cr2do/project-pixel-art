@@ -1,18 +1,8 @@
+import api from '@/lib/api';
+import type { IPixelBoard, IUser } from '@/types';
 import { UserRole, PixelBoardStatus } from '@/types';
 
 export { UserRole, PixelBoardStatus };
-
-export enum AdminActivityType {
-  USER_CREATED = 'USER_CREATED',
-  ROLE_UPDATED = 'ROLE_UPDATED',
-  BOARD_UPDATED = 'BOARD_UPDATED',
-  REPORT_CREATED = 'REPORT_CREATED',
-}
-
-export enum AdminActivityLevel {
-  INFO = 'info',
-  WARNING = 'warning',
-}
 
 export interface AdminUser {
   id: string;
@@ -34,16 +24,25 @@ export interface AdminPixelBoard {
   status: PixelBoardStatus;
   allow_override: boolean;
   delay_seconds: number;
+  endAt?: string;
   contributorCount: number;
   updatedAt: string;
 }
 
-export interface AdminActivity {
-  id: string;
-  type: AdminActivityType;
-  message: string;
-  createdAt: string;
-  level: AdminActivityLevel;
+export interface AdminHeatmapPoint {
+  x: number;
+  y: number;
+  count: number;
+}
+
+export interface AdminBoardHeatmap {
+  board: {
+    id: string;
+    width: number;
+    height: number;
+  };
+  points: AdminHeatmapPoint[];
+  maxCount: number;
 }
 
 export interface AdminDashboardData {
@@ -51,173 +50,116 @@ export interface AdminDashboardData {
     totalUsers: number;
     totalAdmins: number;
     activeBoards: number;
-    pendingReports: number;
   };
   users: AdminUser[];
   pixelBoards: AdminPixelBoard[];
-  activities: AdminActivity[];
 }
 
-interface AdminMockState {
-  users: AdminUser[];
-  pixelBoards: AdminPixelBoard[];
-  activities: AdminActivity[];
-  pendingReports: number;
-}
-
-const mockState: AdminMockState = {
-  users: [],
-  pixelBoards: [],
-  activities: [],
-  pendingReports: 0,
-};
-
-const mockDelay = (ms: number) =>
-  new Promise<void>((resolve) => {
-    window.setTimeout(() => resolve(), ms);
-  });
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-function pushActivity(activity: Omit<AdminActivity, 'id' | 'createdAt'>): void {
-  mockState.activities = [
-    {
-      id: `a-${Date.now()}`,
-      createdAt: nowIso(),
-      ...activity,
-    },
-    ...mockState.activities,
-  ].slice(0, 8);
-}
-
-function buildDashboardData(): AdminDashboardData {
+function mapUserToAdminUser(user: IUser): AdminUser {
   return {
-    kpis: {
-      totalUsers: mockState.users.length,
-      totalAdmins: mockState.users.filter((user) => user.role === UserRole.ADMIN).length,
-      activeBoards: mockState.pixelBoards.filter(
-        (board) => board.status === PixelBoardStatus.IN_PROGRESS,
-      ).length,
-      pendingReports: mockState.pendingReports,
-    },
-    users: mockState.users.map((user) => ({ ...user })),
-    pixelBoards: mockState.pixelBoards.map((board) => ({ ...board })),
-    activities: mockState.activities.map((activity) => ({ ...activity })),
+    id: user.id,
+    lastname: user.lastname,
+    firstname: user.firstname,
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
   };
+}
+
+function mapBoardToAdminBoard(board: IPixelBoard): AdminPixelBoard {
+  return {
+    id: board.id,
+    name: board.name,
+    width: board.width,
+    height: board.height,
+    position_x: board.position_x,
+    position_y: board.position_y,
+    status: board.status,
+    allow_override: board.allow_override,
+    delay_seconds: board.delay_seconds,
+    endAt: board.endAt,
+    contributorCount: board.contributions?.length ?? 0,
+    updatedAt: board.updatedAt,
+  };
+}
+
+export async function adminGetPixelBoards(): Promise<IPixelBoard[]> {
+  const { data } = await api.get<IPixelBoard[]>('/admin/pixelboards');
+  return data;
+}
+
+export type AdminCreatePixelBoardPayload = Pick<
+  IPixelBoard,
+  'name' | 'width' | 'height' | 'delay_seconds' | 'allow_override' | 'status'
+> & { endAt?: string };
+
+export async function adminCreatePixelBoard(payload: AdminCreatePixelBoardPayload): Promise<IPixelBoard> {
+  const { data } = await api.post<IPixelBoard>('/admin/pixelboards', payload);
+  return data;
+}
+
+export type AdminUpdatePixelBoardPayload = Partial<
+  Pick<IPixelBoard, 'name' | 'width' | 'height' | 'delay_seconds' | 'allow_override' | 'status'>
+> & { endAt?: string | null };
+
+export async function adminUpdatePixelBoard(
+  boardId: string,
+  payload: AdminUpdatePixelBoardPayload,
+): Promise<IPixelBoard> {
+  const { data } = await api.put<IPixelBoard>(`/admin/pixelboards/${boardId}`, payload);
+  return data;
+}
+
+export async function adminDeletePixelBoard(boardId: string): Promise<void> {
+  await api.delete(`/admin/pixelboards/${boardId}`);
+}
+
+export async function adminGetPixelBoardHeatmap(
+  boardId: string,
+  params?: { from?: string; to?: string },
+): Promise<AdminBoardHeatmap> {
+  const { data } = await api.get<AdminBoardHeatmap>(`/admin/pixelboards/${boardId}/heatmap`, {
+    params,
+  });
+  return data;
 }
 
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {
-  await mockDelay(300);
-  return buildDashboardData();
+  const [usersRes, boardsRes, statsRes] = await Promise.all([
+    api.get<IUser[]>('/admin/users'),
+    api.get<IPixelBoard[]>('/admin/pixelboards'),
+    api.get<{ totalUsers: number; totalBoards: number; totalPixels: number; activeBoards: number }>(
+      '/admin/stats',
+    ),
+  ]);
+
+  return {
+    kpis: {
+      totalUsers: statsRes.data.totalUsers,
+      totalAdmins: usersRes.data.filter((u) => u.role === UserRole.ADMIN).length,
+      activeBoards: statsRes.data.activeBoards,
+    },
+    users: usersRes.data.map(mapUserToAdminUser),
+    pixelBoards: boardsRes.data.map(mapBoardToAdminBoard),
+  };
 }
 
-export async function toggleUserRole(userId: string): Promise<AdminDashboardData> {
-  await mockDelay(180);
-
-  const target = mockState.users.find((user) => user.id === userId);
-  if (!target) {
-    throw new Error('User not found');
+export async function toggleUserRole(_userId: string): Promise<AdminDashboardData> {
+  try {
+    await api.patch(`/admin/users/${_userId}/role`);
+    return getAdminDashboardData();
+  } catch (err: unknown) {
+    if (typeof err === 'object' && err && 'isAxiosError' in err) {
+      const axiosErr = err as { response?: { data?: unknown } };
+      const data = axiosErr.response?.data;
+      if (data && typeof data === 'object' && 'message' in data) {
+        const message = (data as { message?: unknown }).message;
+        if (typeof message === 'string' && message.trim() !== '') {
+          throw new Error(message);
+        }
+      }
+    }
+    throw err;
   }
-
-  const adminCount = mockState.users.filter((user) => user.role === UserRole.ADMIN).length;
-  if (target.role === UserRole.ADMIN && adminCount <= 1) {
-    throw new Error('At least one admin is required.');
-  }
-
-  target.role = target.role === UserRole.ADMIN ? UserRole.USER : UserRole.ADMIN;
-  target.updatedAt = nowIso();
-
-  pushActivity({
-    type: AdminActivityType.ROLE_UPDATED,
-    level: AdminActivityLevel.INFO,
-    message: `${target.firstname} ${target.lastname} role changed to ${target.role}.`,
-  });
-
-  return buildDashboardData();
-}
-
-export async function increaseBoardDelay(
-  boardId: string,
-  amount = 15,
-): Promise<AdminDashboardData> {
-  await mockDelay(180);
-
-  const target = mockState.pixelBoards.find((board) => board.id === boardId);
-  if (!target) {
-    throw new Error('Board not found');
-  }
-
-  target.delay_seconds = Math.min(300, target.delay_seconds + amount);
-  target.updatedAt = nowIso();
-
-  pushActivity({
-    type: AdminActivityType.BOARD_UPDATED,
-    level: AdminActivityLevel.INFO,
-    message: `${target.name} delay updated to ${target.delay_seconds}s.`,
-  });
-
-  return buildDashboardData();
-}
-
-export async function resolveOneReport(): Promise<AdminDashboardData> {
-  await mockDelay(220);
-
-  if (mockState.pendingReports <= 0) {
-    throw new Error('No pending reports left.');
-  }
-
-  mockState.pendingReports -= 1;
-
-  pushActivity({
-    type: AdminActivityType.REPORT_CREATED,
-    level:
-      mockState.pendingReports > 0 ? AdminActivityLevel.WARNING : AdminActivityLevel.INFO,
-    message: `A report was processed. ${mockState.pendingReports} pending report(s) remaining.`,
-  });
-
-  return buildDashboardData();
-}
-
-export async function applyDefaultDelay(delaySeconds: number): Promise<AdminDashboardData> {
-  await mockDelay(240);
-
-  mockState.pixelBoards = mockState.pixelBoards.map((board) =>
-    board.status === PixelBoardStatus.IN_PROGRESS
-      ? { ...board, delay_seconds: delaySeconds, updatedAt: nowIso() }
-      : board,
-  );
-
-  pushActivity({
-    type: AdminActivityType.BOARD_UPDATED,
-    level: AdminActivityLevel.INFO,
-    message: `Default delay changed to ${delaySeconds}s for active boards.`,
-  });
-
-  return buildDashboardData();
-}
-
-export async function toggleOverridePolicy(): Promise<AdminDashboardData> {
-  await mockDelay(200);
-
-  const hasEnabled = mockState.pixelBoards.some(
-    (board) => board.status === PixelBoardStatus.IN_PROGRESS && board.allow_override,
-  );
-
-  mockState.pixelBoards = mockState.pixelBoards.map((board) =>
-    board.status === PixelBoardStatus.IN_PROGRESS
-      ? { ...board, allow_override: !hasEnabled, updatedAt: nowIso() }
-      : board,
-  );
-
-  pushActivity({
-    type: AdminActivityType.BOARD_UPDATED,
-    level: !hasEnabled ? AdminActivityLevel.WARNING : AdminActivityLevel.INFO,
-    message: !hasEnabled
-      ? 'Override enabled for active boards.'
-      : 'Override disabled for active boards.',
-  });
-
-  return buildDashboardData();
 }

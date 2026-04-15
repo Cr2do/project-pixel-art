@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Grid3X3, ArrowUpDown, Plus } from 'lucide-react';
+import { Grid3X3, ArrowUpDown, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const PAGE_SIZE = 6;
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -26,6 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
 import * as boardService from '@/services/pixelboard.service';
 import { getApiError } from '@/services/api.utils';
@@ -52,7 +55,7 @@ function BoardCardSkeleton() {
 function CreateBoardDialog({ onCreated }: { onCreated: (board: IPixelBoard) => void }) {
   const [open, setOpen] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { isSubmitting, errors } } = useForm<CreateBoardFormData>({
+  const { register, handleSubmit, reset, watch, setValue, formState: { isSubmitting, errors } } = useForm<CreateBoardFormData>({
     resolver: zodResolver(createBoardSchema),
     defaultValues: {
       name: '',
@@ -60,12 +63,19 @@ function CreateBoardDialog({ onCreated }: { onCreated: (board: IPixelBoard) => v
       height: 50,
       delay_seconds: 0,
       allow_override: false,
+      endAt: '',
     },
   });
 
+  const allowOverride = watch('allow_override');
+
   const onSubmit = async (data: CreateBoardFormData) => {
     try {
-      const board = await boardService.create(data);
+	  const payload = {
+	    ...data,
+	    endAt: data.endAt ? new Date(data.endAt).toISOString() : undefined,
+	  };
+	  const board = await boardService.create(payload);
       toast.success('PixelBoard créé avec succès !');
       onCreated(board);
       reset();
@@ -113,6 +123,18 @@ function CreateBoardDialog({ onCreated }: { onCreated: (board: IPixelBoard) => v
             <Input id="delay_seconds" type="number" placeholder="0" {...register('delay_seconds', { valueAsNumber: true })} />
             {errors.delay_seconds && <p className="text-sm text-destructive">{errors.delay_seconds.message}</p>}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="endAt">Date de fin (optionnel)</Label>
+            <Input id="endAt" type="datetime-local" {...register('endAt')} />
+            {errors.endAt && <p className="text-sm text-destructive">{errors.endAt.message}</p>}
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Superposition de pixels</p>
+              <p className="text-xs text-muted-foreground">Les utilisateurs peuvent réécrire les pixels existants</p>
+            </div>
+            <Switch checked={allowOverride} onCheckedChange={(checked) => setValue('allow_override', checked)} />
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Annuler
@@ -131,14 +153,27 @@ function UserBoardsPage() {
   const { user } = useAuth();
   const [boards, setBoards] = useState<IPixelBoard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(boards.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = useMemo(
+    () => boards.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [boards, currentPage],
+  );
 
   useEffect(() => {
     boardService
       .getAll()
-      .then(setBoards)
+      .then((all) => {
+        const mine = user
+          ? all.filter((b) => b.contributions.some((c) => c.userId === user.id))
+          : [];
+        setBoards(mine);
+      })
       .catch((err) => toast.error(getApiError(err)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   const totalPixels = boards.reduce(
     (sum, board) => sum + (user ? getUserPixelCount(board, user.id) : 0),
@@ -226,7 +261,7 @@ function UserBoardsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {boards.map((board) => {
+          {paginated.map((board) => {
             const myPixels = user ? getUserPixelCount(board, user.id) : 0;
             const totalBoardPixels = board.contributions.reduce(
               (sum, c) => sum + c.nb_pixels_placed,
@@ -269,11 +304,46 @@ function UserBoardsPage() {
                       <span className="text-muted-foreground">Contributeurs</span>
                       <span className="font-medium">{board.contributions.length}</span>
                     </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Date de fin</span>
+                      <span className="font-medium">
+                        {board.endAt ? new Date(board.endAt).toLocaleDateString('fr-FR') : 'Non définie'}
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
               </NavLink>
             );
           })}
+        </div>
+      )}
+
+      {!loading && boards.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {boards.length} board{boards.length > 1 ? 's' : ''} —
+            page {currentPage} sur {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => p - 1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="size-4" />
+              Précédent
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Suivant
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

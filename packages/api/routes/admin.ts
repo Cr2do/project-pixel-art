@@ -4,6 +4,7 @@ import { CreatePixelBoardSchema, UpdatePixelBoardSchema } from '../utils/schemas
 import { SchemaValidationError } from '../utils/errors';
 import * as userService from '../services/user.service';
 import * as boardService from '../services/pixelboard.service';
+import * as heatmapService from '../services/heatmap.service';
 import { User } from '../models/user';
 import { PixelBoard } from '../models/pixelboard';
 import { Pixel } from '../models/pixel';
@@ -31,6 +32,42 @@ router.delete('/users/:id', async (req: Request<{ id: string }>, res: Response, 
   }
 });
 
+// PATCH /api/admin/users/:id/role
+router.patch('/users/:id/role', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const { user: actingUser } = req as unknown as AuthenticatedRequest;
+
+    // Security rule: an admin cannot change their own role.
+    // Another admin must perform that action.
+    if (actingUser._id.toString() === req.params.id) {
+      res.status(403).json({ message: 'Un administrateur ne peut pas modifier son propre rôle.' });
+      return;
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      res.status(404).json({ message: 'Utilisateur introuvable' });
+      return;
+    }
+
+    // Empêche de retirer le dernier admin
+    if (user.role === 'ADMIN') {
+      const adminCount = await User.countDocuments({ role: 'ADMIN' });
+      if (adminCount <= 1) {
+        res.status(400).json({ message: 'Au moins un administrateur est requis.' });
+        return;
+      }
+    }
+
+    user.role = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
+    await user.save();
+
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/admin/pixelboards
 router.get('/pixelboards', async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -39,6 +76,18 @@ router.get('/pixelboards', async (_req: Request, res: Response, next: NextFuncti
     next(err);
   }
 });
+
+// GET /api/admin/pixelboards/:id/heatmap
+router.get(
+  '/pixelboards/:id/heatmap',
+  async (req: Request<{ id: string }, unknown, unknown, { from?: string; to?: string }>, res: Response, next: NextFunction) => {
+    try {
+      res.json(await heatmapService.getPixelBoardHeatmap(req.params.id, req.query));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // POST /api/admin/pixelboards
 router.post('/pixelboards', async (req: Request, res: Response, next: NextFunction) => {
@@ -95,5 +144,6 @@ router.get('/stats', async (_req: Request, res: Response, next: NextFunction) =>
     next(err);
   }
 });
+
 
 export { router as adminRouter };

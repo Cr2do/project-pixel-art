@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Clock,
@@ -28,9 +28,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PixelLogo } from '@/components/common/PixelLogo';
 import { useAuth } from '@/context/AuthContext';
 import * as boardService from '@/services/pixelboard.service';
+import * as pixelService from '@/services/pixel.service';
+import * as statsService from '@/services/stats.service';
 import { getApiError } from '@/services/api.utils';
-import { PixelBoardStatus, type IPixelBoard } from '@/types';
-import { STATUS_LABEL } from '@/utils/pixelboard.utils';
+import { GlobalMapCanvas } from '@/components/map/GlobalMapCanvas';
+import { useGlobalMapSocket } from '@/hooks/use-global-map-socket';
+import type { PixelPlacedEvent } from '@/hooks/use-board-socket';
+import type { IPixelBoard, IPixel } from '@/types';
+import type { StatsResponse } from '@/services/stats.service';
 
 const FEATURES = [
   {
@@ -57,13 +62,6 @@ const FEATURES = [
     description:
       'Certains boards permettent d\'écraser les pixels existants, d\'autres non — deux façons de créer, deux ambiances différentes.',
   },
-];
-
-const STATS = [
-  { label: 'Boards actifs', value: '12', icon: Grid3X3 },
-  { label: 'Pixels placés', value: '84 000+', icon: Paintbrush },
-  { label: 'Artistes', value: '320+', icon: Users },
-  { label: 'Œuvres terminées', value: '8', icon: Trophy },
 ];
 
 function HomeNavbar() {
@@ -231,11 +229,29 @@ function PixelPreview() {
 }
 
 function StatsBar() {
+  const [stats, setStats] = useState<StatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    statsService
+      .getStats()
+      .then(setStats)
+      .catch((err) => console.error('Failed to load stats:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const statsData = [
+    { label: 'Boards actifs', value: loading ? '-' : stats?.activeBoards, icon: Grid3X3 },
+    { label: 'Pixels placés', value: loading ? '-' : stats?.totalPixels.toLocaleString(), icon: Paintbrush },
+    { label: 'Artistes', value: loading ? '-' : stats?.totalContributors, icon: Users },
+    { label: 'Œuvres terminées', value: loading ? '-' : stats?.finishedBoards, icon: Trophy },
+  ];
+
   return (
     <section className="border-y bg-muted/30 py-10">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-          {STATS.map(({ label, value, icon: Icon }) => (
+          {statsData.map(({ label, value, icon: Icon }) => (
             <div key={label} className="flex flex-col items-center gap-2 text-center">
               <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
                 <Icon className="size-5 text-primary" />
@@ -283,17 +299,59 @@ function FeaturesSection() {
   );
 }
 
+
+
 function ActiveBoardsSection() {
-  const [activeBoards, setActiveBoards] = useState<IPixelBoard[]>([]);
+  const [boards, setBoards] = useState<IPixelBoard[]>([]);
+  const [pixelsByBoard, setPixelsByBoard] = useState<Record<string, IPixel[]>>({});
   const [loading, setLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     boardService
       .getAll()
-      .then((boards) => setActiveBoards(boards.filter((b) => b.status === PixelBoardStatus.IN_PROGRESS)))
+      .then((result) => {
+        setBoards(result);
+        result.forEach((board) => {
+          pixelService
+            .getByBoard(board.id)
+            .then((pixels) => setPixelsByBoard((prev) => ({ ...prev, [board.id]: pixels })))
+            .catch(() => {});
+        });
+      })
       .catch((err) => toast.error(getApiError(err)))
       .finally(() => setLoading(false));
   }, []);
+
+  const boardIds = useMemo(() => boards.map((b) => b.id), [boards]);
+
+  const handlePixelPlaced = useCallback((event: PixelPlacedEvent) => {
+    setPixelsByBoard((prev) => {
+      const existing = prev[event.boardId] ?? [];
+      const idx = existing.findIndex(
+        (p) => p.position_x === event.position_x && p.position_y === event.position_y,
+      );
+      const updated = [...existing];
+      if (idx >= 0) {
+        updated[idx] = { ...updated[idx], color: event.color };
+      } else {
+        updated.push({
+          id: `${event.boardId}-${event.position_x}-${event.position_y}`,
+          pixelBoardId: event.boardId,
+          userId: event.userId,
+          username: event.username,
+          position_x: event.position_x,
+          position_y: event.position_y,
+          color: event.color,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      return { ...prev, [event.boardId]: updated };
+    });
+  }, []);
+
+  useGlobalMapSocket(boardIds, handlePixelPlaced);
 
   return (
     <section id="boards" className="py-20 bg-muted/20">
@@ -302,11 +360,11 @@ function ActiveBoardsSection() {
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Boards actifs</h2>
             <p className="mt-1 text-muted-foreground">
-              Rejoignez une toile en cours et posez vos pixels.
+              Carte mondiale — tous les PixelBoards en un coup d'œil.
             </p>
           </div>
           <Button variant="outline" asChild>
-            <Link to="/register">
+            <Link to={isAuthenticated ? '/explore' : '/register'}>
               Voir tous les boards
               <ArrowRight className="ml-2 size-4" />
             </Link>
@@ -314,120 +372,16 @@ function ActiveBoardsSection() {
         </div>
 
         {loading ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <Skeleton className="h-32 w-full rounded-none" />
-                <CardHeader className="pb-2">
-                  <Skeleton className="h-5 w-32 mb-1" />
-                  <Skeleton className="h-3 w-20" />
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : activeBoards.length === 0 ? (
+          <Skeleton className="w-full h-125 rounded-lg" />
+        ) : boards.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <Grid3X3 className="size-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucun board actif pour le moment.</p>
+              <p className="text-muted-foreground">Aucun board disponible pour le moment.</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {activeBoards.map((board) => {
-              const totalPixels = board.contributions.reduce(
-                (sum, c) => sum + c.nb_pixels_placed,
-                0,
-              );
-              const contributors = board.contributions.length;
-
-              return (
-                <Card
-                  key={board.id}
-                  className="group overflow-hidden transition-shadow hover:shadow-lg"
-                >
-                  {/* Mini pixel preview */}
-                  <div className="h-32 bg-linear-to-br from-primary/5 to-primary/20 flex items-center justify-center border-b">
-                    <div
-                      className="rounded opacity-80"
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(8, 1fr)',
-                        width: 64,
-                        height: 64,
-                      }}
-                    >
-                      {Array.from({ length: 64 }, (_, i) => {
-                        const seed = ((board.id.charCodeAt(i % board.id.length) * (i + 1)) * 1103515245) & 0x7fffffff;
-                        const colors = ['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#8b5cf6'];
-                        const hasPixel = seed % 3 === 0;
-                        return (
-                          <div
-                            key={i}
-                            style={{
-                              width: 8,
-                              height: 8,
-                              backgroundColor: hasPixel ? colors[seed % colors.length] : 'transparent',
-                            }}
-                            className={hasPixel ? '' : 'bg-muted/40'}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-base leading-tight">
-                        {board.name}
-                      </CardTitle>
-                      <Badge
-                        variant={
-                          board.status === PixelBoardStatus.IN_PROGRESS
-                            ? 'default'
-                            : 'secondary'
-                        }
-                        className="shrink-0"
-                      >
-                        {STATUS_LABEL[board.status]}
-                      </Badge>
-                    </div>
-                    <CardDescription>
-                      {board.width} × {board.height} pixels
-                    </CardDescription>
-                  </CardHeader>
-
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Users className="size-3.5" />
-                        Contributeurs
-                      </span>
-                      <span className="font-medium">{contributors}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Paintbrush className="size-3.5" />
-                        Pixels posés
-                      </span>
-                      <span className="font-medium">{totalPixels}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Clock className="size-3.5" />
-                        Délai
-                      </span>
-                      <span className="font-medium">{board.delay_seconds}s</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <GlobalMapCanvas boards={boards} pixelsByBoard={pixelsByBoard} />
         )}
       </div>
     </section>
