@@ -35,7 +35,7 @@ router.delete('/users/:id', async (req: Request<{ id: string }>, res: Response, 
 // PATCH /api/admin/users/:id/role
 router.patch('/users/:id/role', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
   try {
-    const { user: actingUser } = req as AuthenticatedRequest;
+    const { user: actingUser } = req as unknown as AuthenticatedRequest;
 
     // Security rule: an admin cannot change their own role.
     // Another admin must perform that action.
