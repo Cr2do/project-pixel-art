@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import { PIXEL_PALETTE } from '@/utils/canvas.utils';
 import type { IHoveredCell, IPixel } from '@/types';
 
@@ -51,8 +52,14 @@ export function usePixelCanvas(
 
   const placePixel = useCallback(
     (x: number, y: number) => {
-      if (cooldownRemaining > 0) return;
-      if (!allowOverride && pixels[y][x] !== '') return;
+      if (cooldownRemaining > 0) {
+        toast.warning(`Cooldown actif — attendez encore ${cooldownRemaining}s`, { id: 'cooldown' });
+        return;
+      }
+      if (!allowOverride && pixels[y][x] !== '') {
+        toast.warning('Ce pixel est déjà occupé et l\'écrasement n\'est pas autorisé sur ce board', { id: 'no-override' });
+        return;
+      }
 
       setPixels((prev) => {
         const next = prev.map((row) => [...row]);

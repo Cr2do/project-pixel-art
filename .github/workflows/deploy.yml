@@ -28,6 +28,16 @@ jobs:
           JWT_EXPIRES_IN=7d
           CANVAS_MAX_WIDTH=5000
           CLIENT_URL=http://${{ vars.SERVER_IP }}
+          FRONTEND_APP_URL=http://${{ vars.SERVER_IP }}
+          RESET_TOKEN_TTL_MS=3600000
+          ADMIN_EMAIL=${{ vars.ADMIN_EMAIL }}
+          ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+          SMTP_HOST=smtp.gmail.com
+          SMTP_PORT=587
+          SMTP_SECURE=false
+          SMTP_USER=${{ secrets.SMTP_USER }}
+          SMTP_PASS=${{ secrets.SMTP_PASS }}
+          SMTP_FROM=${{ secrets.SMTP_USER }}
           VITE_API_URL=http://${{ vars.SERVER_IP }}:8000/api
           IMAGE_TAG=${{ github.event.inputs.image_tag }}
           GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}

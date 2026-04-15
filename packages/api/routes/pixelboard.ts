@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import { authenticate, AuthenticatedRequest } from '../middleware/auth.middleware';
+import { authenticate, authenticateOrAnonymous, AuthenticatedRequest } from '../middleware/auth.middleware';
 import {
   CreatePixelBoardSchema,
   PlacePixelSchema,
@@ -99,8 +99,8 @@ router.get('/:id/export.png', async (req: Request<{ id: string }>, res: Response
   }
 });
 
-// GET /api/pixelboards/:id/pixels — authentifié
-router.get('/:id/pixels', authenticate, async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+// GET /api/pixelboards/:id/pixels — public
+router.get('/:id/pixels', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
   try {
     const pixels = await pixelService.findByBoard(req.params.id);
     res.json(pixels);
@@ -109,8 +109,8 @@ router.get('/:id/pixels', authenticate, async (req: Request<{ id: string }>, res
   }
 });
 
-// POST /api/pixelboards/:id/pixels — authentifié
-router.post('/:id/pixels', authenticate, async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+// POST /api/pixelboards/:id/pixels — authentifié ou anonyme
+router.post('/:id/pixels', authenticateOrAnonymous, async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
   const result = PlacePixelSchema.safeParse(req.body);
   if (!result.success) {
     next(new SchemaValidationError(result.error));

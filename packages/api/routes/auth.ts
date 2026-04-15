@@ -3,6 +3,8 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth.middlewar
 import { RegisterSchema, LoginSchema, ForgotPasswordSchema, ResetPasswordSchema } from '../utils/schemas';
 import { SchemaValidationError } from '../utils/errors';
 import * as authService from '../services/auth.service';
+import { User } from '../models/user';
+import { ANONYMOUS_EMAIL } from '../seed';
 
 const router = Router();
 
@@ -61,6 +63,23 @@ router.post('/reset-password', async (req: Request, res: Response, next: NextFun
   try {
     const data = await authService.resetPassword(result.data);
     res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/anonymous — retourne un JWT pour le visiteur non connecté
+router.post('/anonymous', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const anon = await User.findOne({ email: ANONYMOUS_EMAIL });
+    if (!anon) {
+      res.status(503).json({ message: 'Utilisateur anonyme non initialisé' });
+      return;
+    }
+    const token = authService.generateToken({ userId: anon._id.toString(), role: anon.role });
+    const userObj = anon.toObject({ virtuals: true }) as unknown as Record<string, unknown>;
+    delete userObj.password;
+    res.json({ token, user: userObj });
   } catch (err) {
     next(err);
   }

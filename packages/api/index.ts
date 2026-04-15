@@ -8,6 +8,7 @@ import { errorHandler } from './middleware/error.middleware';
 import { initIO } from './socket/io';
 import { setupSocket } from './socket';
 import { expireBoards } from './services/pixelboard.service';
+import { seed } from './seed';
 
 const app = express();
 const port = Number(process.env.PORT ?? 8000);
@@ -31,7 +32,9 @@ setupSocket(io);
 
 const EXPIRE_INTERVAL_MS = 60_000_000; // check 60 minutes
 
-connectDB().then(() => {
+connectDB().then(async () => {
+  await seed();
+
   httpServer.listen(port, () => {
     console.log(`Server listening on http://localhost:${port}`);
   });
