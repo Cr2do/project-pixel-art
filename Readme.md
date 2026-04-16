@@ -4,10 +4,12 @@ Toile collaborative de pixel art en temps réel.
 
 ## Membres du groupe
 
-- AYIVI Marie-diégo Crédo
-- MOUMENI Mohamed Amine
-- RAKOTOSON Mamitiana
-- BENDIB Khadija
+| Membre | Contributions |
+| --- | --- |
+| **AYIVI Marie-diégo Crédo** | Définition de l'architecture et répartition des tâches, structuration du projet (monorepo, dossiers, configuration), modèles Mongoose et schémas de validation Zod, implémentation de l'API (authentification, middleware, routes, placement de pixels, gestion des boards), développement du frontend (composant tailwind, shadcn, page d'accueil, mode visiteur non connecté, layouts, thème, intégration des services API, canvas, statistiques), configuration Docker, infrastructure Terraform et déploiement GCP, pipeline CI/CD GitHub Actions, revue de code et corrections |
+| **MOUMENI Mohamed Amine** | Intégration du service d'envoi d'emails et du reset de mot de passe, export des boards en image, upload et replay d'images, interface d'administration dynamique, outils de board (UI et gestion de la date de fin) |
+| **RAKOTOSON Mamitiana** | Mise en place de la communication WebSocket temps réel avec tooltip auteur, développement de la carte interactive et page d'exploration, carte globale , amelioration de l' interaction avec le canvas , pages utilisateur (dashboard, profil, contributions, détail board), intégration du contexte d'authentification, composants UI Shadcn et types TypeScript |
+| **BENDIB Khadija** | Développement des pages d'authentification (login, register, reset password), module d'administration (CRUD boards, gestion des rôles, paramètres de délai), navigation admin dans le layout utilisateur, heatmap des contributions |
 
 ## Démo en ligne
 
